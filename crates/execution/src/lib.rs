@@ -1,4 +1,8 @@
 //! Live execution engine and transaction management.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Alert system.
 pub mod alerts;
 /// Approval management.

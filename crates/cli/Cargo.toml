@@ -22,4 +22,5 @@ chrono = { workspace = true }
 rust_decimal = { workspace = true }
 primitive-types = { workspace = true }
 uuid = { workspace = true }
+tracing = { workspace = true }
 

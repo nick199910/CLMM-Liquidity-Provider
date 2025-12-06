@@ -1,4 +1,8 @@
 //! Simulation engine for backtesting strategies.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Simulation engine implementation.
 pub mod engine;
 /// Event definitions.

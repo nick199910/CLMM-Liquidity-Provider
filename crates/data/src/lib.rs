@@ -1,4 +1,8 @@
 //! Data ingestion and storage.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Data providers.
 pub mod providers;
 /// Data repositories.

@@ -1,4 +1,8 @@
 //! REST API server and endpoints.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Request handlers.
 pub mod handlers;
 /// Middleware components.

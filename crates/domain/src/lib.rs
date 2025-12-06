@@ -1,4 +1,8 @@
 //! Domain models and logic for the CLMM Liquidity Provider.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 pub mod entities;
 /// Enumerations used across the domain.
 pub mod enums;

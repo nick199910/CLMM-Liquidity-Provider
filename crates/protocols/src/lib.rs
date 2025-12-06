@@ -1,4 +1,8 @@
 //! Protocol adapters and interfaces.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Orca protocol adapter.
 pub mod orca;
 /// Data parsers.

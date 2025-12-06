@@ -1,23 +1,16 @@
 //! Command Line Interface for the CLMM Liquidity Provider.
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use clmm_lp_data::{MarketDataProvider, providers::BirdeyeProvider};
-use clmm_lp_domain::entities::position::Position;
-use clmm_lp_domain::entities::token::Token;
-use clmm_lp_domain::enums::PositionStatus;
-use clmm_lp_domain::value_objects::amount::Amount;
-use clmm_lp_domain::value_objects::price::Price;
-use clmm_lp_domain::value_objects::price_range::PriceRange;
-use clmm_lp_simulation::engine::SimulationEngine;
-use clmm_lp_simulation::liquidity::ConstantLiquidity;
-use clmm_lp_simulation::price_path::HistoricalPricePath;
-use clmm_lp_simulation::volume::ConstantVolume;
+use clmm_lp_data::prelude::*;
+use clmm_lp_domain::prelude::*;
+use clmm_lp_simulation::prelude::*;
 use dotenv::dotenv;
 use primitive_types::U256;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Parser)]
@@ -88,7 +81,7 @@ async fn main() -> Result<()> {
             let api_key = env::var("BIRDEYE_API_KEY")
                 .expect("BIRDEYE_API_KEY must be set in .env or environment");
 
-            println!("📡 Initializing Birdeye Provider...");
+            info!("📡 Initializing Birdeye Provider...");
             let provider = BirdeyeProvider::new(api_key);
 
             // Define Tokens (Token B assumed USDC for this demo)
@@ -103,7 +96,7 @@ async fn main() -> Result<()> {
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let start_time = now - (hours * 3600);
 
-            println!(
+            info!(
                 "🔍 Fetching data for {}/USDC from {} to {}...",
                 symbol_a, start_time, now
             );
@@ -115,17 +108,17 @@ async fn main() -> Result<()> {
                 )
                 .await?;
 
-            println!("✅ Fetched {} candles:", candles.len());
-            println!(
+            info!("✅ Fetched {} candles:", candles.len());
+            info!(
                 "{:<20} | {:<10} | {:<10} | {:<10} | {:<10}",
                 "Time", "Open", "High", "Low", "Close"
             );
-            println!("{}", "-".repeat(70));
+            info!("{}", "-".repeat(70));
 
             for candle in candles {
                 let datetime = chrono::DateTime::from_timestamp(candle.start_timestamp as i64, 0)
                     .unwrap_or_default();
-                println!(
+                info!(
                     "{:<20} | {:<10.4} | {:<10.4} | {:<10.4} | {:<10.4}",
                     datetime.format("%Y-%m-%d %H:%M"),
                     candle.open.value,
@@ -146,7 +139,7 @@ async fn main() -> Result<()> {
             let api_key = env::var("BIRDEYE_API_KEY")
                 .expect("BIRDEYE_API_KEY must be set in .env or environment");
 
-            println!("📡 Initializing Backtest Engine...");
+            info!("📡 Initializing Backtest Engine...");
             let provider = BirdeyeProvider::new(api_key);
 
             // Define Tokens
@@ -161,7 +154,7 @@ async fn main() -> Result<()> {
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let start_time = now - (days * 24 * 3600);
 
-            println!(
+            info!(
                 "🔍 Fetching historical data for {}/USDC ({} days)...",
                 symbol_a, days
             );
@@ -171,7 +164,7 @@ async fn main() -> Result<()> {
                 .await?;
 
             if candles.is_empty() {
-                println!("❌ No data found for the specified period.");
+                info!("❌ No data found for the specified period.");
                 return Ok(());
             }
 
@@ -216,21 +209,21 @@ async fn main() -> Result<()> {
                 prices.len(),
             );
 
-            println!("🚀 Running simulation over {} steps...", prices.len());
+            info!("🚀 Running simulation over {} steps...", prices.len());
             let result = engine.run();
 
-            println!("\n📊 Backtest Results");
-            println!("════════════════════════════════════");
-            println!("Initial Capital: ${:.2}", capital);
-            println!("Final Value:     ${:.2}", result.final_position_value);
-            println!("Net PnL:         ${:.2}", result.net_pnl);
-            println!("Fees Earned:     ${:.2}", result.total_fees_earned);
-            println!("Impermanent Loss:${:.2}", result.total_il);
-            println!(
+            info!("\n📊 Backtest Results");
+            info!("════════════════════════════════════");
+            info!("Initial Capital: ${:.2}", capital);
+            info!("Final Value:     ${:.2}", result.final_position_value);
+            info!("Net PnL:         ${:.2}", result.net_pnl);
+            info!("Fees Earned:     ${:.2}", result.total_fees_earned);
+            info!("Impermanent Loss:${:.2}", result.total_il);
+            info!(
                 "Time in Range:   {:.1}%",
                 result.time_in_range_percentage * Decimal::from(100)
             );
-            println!("════════════════════════════════════");
+            info!("════════════════════════════════════");
         }
     }
 

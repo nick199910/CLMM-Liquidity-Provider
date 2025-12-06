@@ -1,4 +1,8 @@
 //! Optimization algorithms and strategies.
+
+/// Prelude module for convenient imports.
+pub mod prelude;
+
 /// Optimization constraints.
 pub mod constraints;
 /// Optimization objectives.
