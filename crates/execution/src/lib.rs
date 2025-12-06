@@ -1,3 +1,4 @@
+//! Live execution engine and transaction management.
 pub mod alerts;
 pub mod approvals;
 pub mod dashboard;

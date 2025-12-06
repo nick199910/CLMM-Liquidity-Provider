@@ -1,3 +1,4 @@
+//! Simulation engine for backtesting strategies.
 pub mod engine;
 pub mod event;
 pub mod monte_carlo;

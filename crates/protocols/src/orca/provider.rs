@@ -1,15 +1,17 @@
 use crate::PoolFetcher;
 use crate::solana_client::SolanaRpcAdapter;
-use amm_domain::entities::pool::Pool;
-use amm_domain::entities::token::Token;
-use amm_domain::enums::{PoolType, Protocol};
-use amm_domain::value_objects::amount::Amount;
 use anyhow::Result;
 use async_trait::async_trait;
+use clmm_lp_domain::entities::pool::Pool;
+use clmm_lp_domain::entities::token::Token;
+use clmm_lp_domain::enums::{PoolType, Protocol};
+use clmm_lp_domain::value_objects::amount::Amount;
 use primitive_types::U256;
 
 // Real implementation would parse Whirlpool data
+/// Provider for Orca Whirlpool pools.
 pub struct OrcaPoolProvider {
+    /// The Solana RPC adapter.
     pub rpc: SolanaRpcAdapter,
 }
 

@@ -1,20 +1,26 @@
 use crate::price_path::PricePathGenerator;
 use crate::volume::VolumeModel;
-use amm_domain::entities::position::Position;
-use amm_domain::metrics::impermanent_loss::calculate_il_concentrated;
-use amm_domain::value_objects::price::Price;
-use amm_domain::value_objects::simulation_result::SimulationResult;
+use clmm_lp_domain::entities::position::Position;
+use clmm_lp_domain::metrics::impermanent_loss::calculate_il_concentrated;
+use clmm_lp_domain::value_objects::price::Price;
+use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 
+/// Engine for running simulations.
 pub struct SimulationEngine<P: PricePathGenerator, V: VolumeModel> {
+    /// The position to simulate.
     pub position: Position,
+    /// The price path generator.
     pub price_path_generator: P,
+    /// The volume model.
     pub volume_model: V,
+    /// The number of simulation steps.
     pub steps: usize,
 }
 
 impl<P: PricePathGenerator, V: VolumeModel> SimulationEngine<P, V> {
+    /// Creates a new SimulationEngine.
     pub fn new(position: Position, price_path_generator: P, volume_model: V, steps: usize) -> Self {
         Self {
             position,
@@ -24,6 +30,7 @@ impl<P: PricePathGenerator, V: VolumeModel> SimulationEngine<P, V> {
         }
     }
 
+    /// Runs the simulation.
     pub fn run(&mut self) -> SimulationResult {
         let prices = self.price_path_generator.generate(self.steps);
 
@@ -101,16 +108,16 @@ mod tests {
     use super::*;
     use crate::price_path::DeterministicPricePath;
     use crate::volume::ConstantVolume;
-    use amm_domain::entities::position::Position;
-    use amm_domain::enums::PositionStatus;
-    use amm_domain::value_objects::price::Price;
-    use amm_domain::value_objects::{amount::Amount, price_range::PriceRange};
+    use clmm_lp_domain::entities::position::Position;
+    use clmm_lp_domain::enums::PositionStatus;
+    use clmm_lp_domain::value_objects::price::Price;
+    use clmm_lp_domain::value_objects::{amount::Amount, price_range::PriceRange};
     use primitive_types::U256;
     use uuid::Uuid;
 
     fn create_dummy_position() -> Position {
         Position {
-            id: amm_domain::entities::position::PositionId(Uuid::new_v4()),
+            id: clmm_lp_domain::entities::position::PositionId(Uuid::new_v4()),
             pool_address: "pool1".to_string(),
             owner_address: "owner1".to_string(),
             liquidity_amount: 1000,

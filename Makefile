@@ -73,10 +73,29 @@ doc-open:
 .PHONY: publish
 publish:
 	find . -name ".DS_Store" -type f -delete | true
-	cargo login ${CARGO_REGISTRY_TOKEN}
-	cargo package
-	cargo publish
+	# Login is handled by user session usually, or env var
+	# cargo login ${CARGO_REGISTRY_TOKEN}
+	cargo publish -p clmm-lp-domain
+	cargo publish -p clmm-lp-simulation
+	cargo publish -p clmm-lp-protocols
+	cargo publish -p clmm-lp-optimization
+	cargo publish -p clmm-lp-execution
+	cargo publish -p clmm-lp-data
+	cargo publish -p clmm-lp-api
+	cargo publish -p clmm-lp-cli
 
+.PHONY: publish-dry-run
+publish-dry-run:
+	cargo publish -p clmm-lp-domain --dry-run
+	cargo publish -p clmm-lp-simulation --dry-run
+	cargo publish -p clmm-lp-protocols --dry-run
+	cargo publish -p clmm-lp-optimization --dry-run
+	cargo publish -p clmm-lp-execution --dry-run
+	cargo publish -p clmm-lp-data --dry-run
+	cargo publish -p clmm-lp-api --dry-run
+	cargo publish -p clmm-lp-cli --dry-run
+
+# Run the project
 .PHONY: coverage
 coverage:
 	export LOGLEVEL=WARN

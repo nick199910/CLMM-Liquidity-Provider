@@ -1,3 +1,4 @@
+//! Domain models and logic for the CLMM Liquidity Provider.
 pub mod entities;
 pub mod enums;
 pub mod fees;

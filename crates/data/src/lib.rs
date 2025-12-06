@@ -1,13 +1,16 @@
+//! Data ingestion and storage.
 pub mod providers;
 pub mod repository;
 
-use amm_domain::entities::price_candle::PriceCandle;
-use amm_domain::entities::token::Token;
 use anyhow::Result;
 use async_trait::async_trait;
+use clmm_lp_domain::entities::price_candle::PriceCandle;
+use clmm_lp_domain::entities::token::Token;
 
+/// Trait for providing market data.
 #[async_trait]
 pub trait MarketDataProvider {
+    /// Fetches price history for a token pair.
     async fn get_price_history(
         &self,
         token_a: &Token,

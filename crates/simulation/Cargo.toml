@@ -1,15 +1,21 @@
 [package]
-name = "amm-simulation"
+name = "clmm-lp-simulation"
 version = "0.1.0"
+authors = { workspace = true }
 edition = "2024"
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+description = { workspace = true }
 
 [dependencies]
-amm-domain = { workspace = true }
+clmm-lp-domain = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-rand = "0.8"
-rand_distr = "0.4"
+rand = { workspace = true }
+rand_distr = { workspace = true }
 rust_decimal = { workspace = true }
 
 [dev-dependencies]

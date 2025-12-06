@@ -1,3 +1,4 @@
+//! Core entities for the domain.
 pub mod pool;
 pub mod position;
 pub mod price_candle;

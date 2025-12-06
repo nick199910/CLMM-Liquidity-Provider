@@ -1,21 +1,26 @@
 use crate::objective::ObjectiveFunction;
-use amm_domain::entities::position::Position;
-use amm_domain::value_objects::OptimizationResult;
-use amm_domain::value_objects::price::Price;
-use amm_domain::value_objects::price_range::PriceRange;
-use amm_domain::value_objects::simulation_result::SimulationResult;
-use amm_simulation::monte_carlo::MonteCarloRunner;
-use amm_simulation::volume::ConstantVolume;
+use clmm_lp_domain::entities::position::Position;
+use clmm_lp_domain::value_objects::OptimizationResult;
+use clmm_lp_domain::value_objects::price::Price;
+use clmm_lp_domain::value_objects::price_range::PriceRange;
+use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
+use clmm_lp_simulation::monte_carlo::MonteCarloRunner;
+use clmm_lp_simulation::volume::ConstantVolume;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 
+/// Optimizer for finding the best price range.
 pub struct RangeOptimizer {
+    /// Number of iterations for Monte Carlo.
     pub iterations: usize,
+    /// Number of steps per iteration.
     pub steps: usize,
+    /// Time step in years.
     pub time_step: f64,
 }
 
 impl RangeOptimizer {
+    /// Creates a new RangeOptimizer.
     pub fn new(iterations: usize, steps: usize, time_step: f64) -> Self {
         Self {
             iterations,
@@ -24,6 +29,7 @@ impl RangeOptimizer {
         }
     }
 
+    /// Optimizes the price range for a given position.
     pub fn optimize<O: ObjectiveFunction>(
         &self,
         base_position: Position,
@@ -110,9 +116,9 @@ impl RangeOptimizer {
 mod tests {
     use super::*;
     use crate::objective::MaximizeNetPnL;
-    use amm_domain::entities::position::{Position, PositionId};
-    use amm_domain::enums::PositionStatus;
-    use amm_domain::value_objects::amount::Amount;
+    use clmm_lp_domain::entities::position::{Position, PositionId};
+    use clmm_lp_domain::enums::PositionStatus;
+    use clmm_lp_domain::value_objects::amount::Amount;
     use primitive_types::U256;
     use uuid::Uuid;
 

@@ -5,23 +5,28 @@ use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
 
+/// Adapter for Solana RPC interactions.
 pub struct SolanaRpcAdapter {
+    /// The RPC client.
     pub client: Arc<RpcClient>,
 }
 
 impl SolanaRpcAdapter {
+    /// Creates a new SolanaRpcAdapter.
     pub fn new(rpc_url: &str) -> Self {
         Self {
             client: Arc::new(RpcClient::new(rpc_url.to_string())),
         }
     }
 
+    /// Fetches account data for a given address.
     pub async fn get_account_data(&self, address: &str) -> Result<Vec<u8>> {
         let pubkey = Pubkey::from_str(address).map_err(|_| anyhow::anyhow!("Invalid pubkey"))?;
         let account = self.client.get_account(&pubkey).await?;
         Ok(account.data)
     }
 
+    /// Fetches multiple accounts.
     pub async fn get_multiple_accounts(
         &self,
         addresses: &[String],

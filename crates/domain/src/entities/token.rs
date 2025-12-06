@@ -1,15 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Represents a token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
+    /// The mint address of the token.
     pub mint_address: String,
+    /// The symbol of the token.
     pub symbol: String,
+    /// The number of decimals of the token.
     pub decimals: u8,
+    /// The name of the token.
     pub name: String,
+    /// The CoinGecko ID of the token.
     pub coingecko_id: Option<String>,
 }
 
 impl Token {
+    /// Creates a new Token.
     pub fn new(
         mint: impl Into<String>,
         symbol: impl Into<String>,

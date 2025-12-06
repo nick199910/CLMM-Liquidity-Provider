@@ -1,31 +1,48 @@
 use crate::engine::SimulationEngine;
 use crate::price_path::GeometricBrownianMotion;
 use crate::volume::VolumeModel;
-use amm_domain::entities::position::Position;
-use amm_domain::value_objects::simulation_result::SimulationResult;
+use clmm_lp_domain::entities::position::Position;
+use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
 use rust_decimal::Decimal;
 
+/// Runner for Monte Carlo simulations.
 pub struct MonteCarloRunner<V: VolumeModel + Clone> {
+    /// The position to simulate.
     pub position: Position,
+    /// The volume model.
     pub volume_model: V,
+    /// The initial price.
     pub initial_price: Decimal,
+    /// The annualized drift.
     pub drift: f64,
+    /// The annualized volatility.
     pub volatility: f64,
+    /// The time step in years.
     pub time_step: f64,
+    /// The number of steps per iteration.
     pub steps: usize,
+    /// The number of iterations.
     pub iterations: usize,
 }
 
+/// Result of a Monte Carlo simulation run.
 pub struct AggregateResult {
+    /// Mean net PnL.
     pub mean_net_pnl: Decimal,
+    /// Median net PnL.
     pub median_net_pnl: Decimal,
+    /// Value at Risk (95%).
     pub var_95_net_pnl: Decimal, // Value at Risk (5th percentile)
+    /// Mean fees earned.
     pub mean_fees: Decimal,
+    /// Mean impermanent loss.
     pub mean_il: Decimal,
+    /// Number of iterations run.
     pub iterations: usize,
 }
 
 impl<V: VolumeModel + Clone> MonteCarloRunner<V> {
+    /// Runs the Monte Carlo simulation.
     pub fn run(&mut self) -> AggregateResult {
         let mut results: Vec<SimulationResult> = Vec::with_capacity(self.iterations);
 

@@ -1,12 +1,18 @@
 [package]
-name = "amm-execution"
+name = "clmm-lp-execution"
 version = "0.1.0"
+authors = { workspace = true }
 edition = "2024"
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+description = { workspace = true }
 
 [dependencies]
-amm-domain = { workspace = true }
-amm-protocols = { workspace = true }
-amm-optimization = { workspace = true }
+clmm-lp-domain = { workspace = true }
+clmm-lp-protocols = { workspace = true }
+clmm-lp-optimization = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 serde = { workspace = true }

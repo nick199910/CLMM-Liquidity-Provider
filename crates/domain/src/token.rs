@@ -3,15 +3,28 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Represents a token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
+    /// The address of the token.
     pub address: String,
+    /// The symbol of the token.
     pub symbol: String,
+    /// The decimals of the token.
     pub decimals: u8,
+    /// The name of the token.
     pub name: String,
 }
 
 impl Token {
+    /// Creates a new Token.
+    ///
+    /// # Arguments
+    ///
+    /// * `address`: The address of the token.
+    /// * `symbol`: The symbol of the token.
+    /// * `decimals`: The decimals of the token.
+    /// * `name`: The name of the token.
     pub fn new(
         address: impl Into<String>,
         symbol: impl Into<String>,
@@ -27,30 +40,40 @@ impl Token {
     }
 }
 
+/// Represents a token amount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TokenAmount(pub U256);
 
 impl TokenAmount {
+    /// Creates a new TokenAmount.
+    ///
+    /// # Arguments
+    ///
+    /// * `amount`: The amount of the token.
     pub fn new(amount: impl Into<U256>) -> Self {
         Self(amount.into())
     }
 
+    /// Creates a zero TokenAmount.
     pub fn zero() -> Self {
         Self(U256::zero())
     }
 
+    /// Returns the amount as U256.
     pub fn as_u256(&self) -> U256 {
         self.0
     }
 }
 
 impl From<u64> for TokenAmount {
+    /// Converts a u64 into a TokenAmount.
     fn from(v: u64) -> Self {
         Self(U256::from(v))
     }
 }
 
 impl From<u128> for TokenAmount {
+    /// Converts a u128 into a TokenAmount.
     fn from(v: u128) -> Self {
         Self(U256::from(v))
     }
@@ -66,6 +89,16 @@ impl fmt::Display for TokenAmount {
 pub struct Price(pub Decimal);
 
 impl Price {
+    /// Creates a new instance of the struct with the given price.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A `Decimal` value representing the price to initialize the struct with.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of the struct containing the specified price.
+    ///
     pub fn new(price: Decimal) -> Self {
         Self(price)
     }

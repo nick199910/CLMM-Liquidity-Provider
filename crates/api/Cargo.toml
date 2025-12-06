@@ -1,12 +1,18 @@
 [package]
-name = "amm-api"
+name = "clmm-lp-api"
 version = "0.1.0"
+authors = { workspace = true }
 edition = "2024"
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+description = { workspace = true }
 
 [dependencies]
-amm-domain = { workspace = true }
-amm-execution = { workspace = true }
-amm-data = { workspace = true }
+clmm-lp-domain = { workspace = true }
+clmm-lp-execution = { workspace = true }
+clmm-lp-data = { workspace = true }
 axum = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }

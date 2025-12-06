@@ -1,9 +1,12 @@
-use amm_domain::value_objects::simulation_result::SimulationResult;
+use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
 use rust_decimal::Decimal;
 use std::cmp::Ordering;
 
+/// Trait for objective functions.
 pub trait ObjectiveFunction {
+    /// Evaluates the simulation result and returns a score.
     fn evaluate(&self, result: &SimulationResult) -> Decimal;
+    /// Compares two simulation results.
     fn compare(&self, a: &SimulationResult, b: &SimulationResult) -> Ordering {
         self.evaluate(a)
             .partial_cmp(&self.evaluate(b))
@@ -11,21 +14,27 @@ pub trait ObjectiveFunction {
     }
 }
 
+/// Objective function to maximize Net PnL.
 pub struct MaximizeNetPnL;
+
 impl ObjectiveFunction for MaximizeNetPnL {
     fn evaluate(&self, result: &SimulationResult) -> Decimal {
         result.net_pnl
     }
 }
 
+/// Objective function to maximize Fees.
 pub struct MaximizeFees;
+
 impl ObjectiveFunction for MaximizeFees {
     fn evaluate(&self, result: &SimulationResult) -> Decimal {
         result.total_fees_earned
     }
 }
 
+/// Objective function to maximize Sharpe Ratio.
 pub struct MaximizeSharpeRatio {
+    /// Risk-free rate.
     pub risk_free_rate: Decimal,
 }
 impl ObjectiveFunction for MaximizeSharpeRatio {

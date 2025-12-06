@@ -1,3 +1,4 @@
+//! Optimization algorithms and strategies.
 pub mod constraints;
 pub mod objective;
 pub mod optimizer;

@@ -1,16 +1,22 @@
 [package]
-name = "amm-protocols"
+name = "clmm-lp-protocols"
 version = "0.1.0"
+authors = { workspace = true }
 edition = "2024"
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+description = { workspace = true }
 
 [dependencies]
-amm-domain = { workspace = true }
+clmm-lp-domain = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 spl-token = { workspace = true }
 serde = { workspace = true }
 anyhow = { workspace = true }
-borsh = "1.5"
+borsh = { workspace = true }
 primitive-types = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }

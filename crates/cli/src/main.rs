@@ -1,7 +1,8 @@
-use amm_data::{MarketDataProvider, providers::BirdeyeProvider};
-use amm_domain::entities::token::Token;
+//! Command Line Interface for the CLMM Liquidity Provider.
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use clmm_lp_data::{MarketDataProvider, providers::BirdeyeProvider};
+use clmm_lp_domain::entities::token::Token;
 use dotenv::dotenv;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};

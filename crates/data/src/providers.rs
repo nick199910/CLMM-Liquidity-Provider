@@ -1,9 +1,9 @@
 use crate::MarketDataProvider;
-use amm_domain::entities::price_candle::PriceCandle;
-use amm_domain::entities::token::Token;
-use amm_domain::value_objects::{amount::Amount, price::Price};
 use anyhow::Result;
 use async_trait::async_trait;
+use clmm_lp_domain::entities::price_candle::PriceCandle;
+use clmm_lp_domain::entities::token::Token;
+use clmm_lp_domain::value_objects::{amount::Amount, price::Price};
 use primitive_types::U256;
 use reqwest::Client;
 use rust_decimal::Decimal;
@@ -32,12 +32,16 @@ struct BirdeyeCandle {
     unix_time: u64,
 }
 
+/// Provider for Birdeye API.
 pub struct BirdeyeProvider {
+    /// The HTTP client.
     pub client: Client,
+    /// The API key.
     pub api_key: String,
 }
 
 impl BirdeyeProvider {
+    /// Creates a new BirdeyeProvider.
     pub fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),
@@ -173,7 +177,7 @@ impl MarketDataProvider for BirdeyeProvider {
     }
 }
 
-// Mock Provider for Testing
+/// Mock Provider for Testing
 pub struct MockMarketDataProvider;
 
 #[async_trait]
