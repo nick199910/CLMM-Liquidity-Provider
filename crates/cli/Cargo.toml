@@ -1,0 +1,15 @@
+[package]
+name = "amm-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+amm-domain = { workspace = true }
+amm-data = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+dotenv = "0.15"
+tracing = { workspace = true }
+tracing-subscriber = "0.3"
+clap = { version = "4.4", features = ["derive"] }
+chrono = "0.4"
