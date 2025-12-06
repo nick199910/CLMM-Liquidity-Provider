@@ -20,16 +20,28 @@ env:
 
 jobs:
   semver:
-    name: semver
+    name: semver-${{ matrix.crate }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - clmm-lp-api
+          - clmm-lp-cli
+          - clmm-lp-data
+          - clmm-lp-domain
+          - clmm-lp-execution
+          - clmm-lp-optimization
+          - clmm-lp-protocols
+          - clmm-lp-simulation
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
-      - name: Check semver
+      - name: Check semver for ${{ matrix.crate }}
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
-          package: clmm-liquidity-provider
+          package: ${{ matrix.crate }}
           feature-group: all-features
           rust-toolchain: stable

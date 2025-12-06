@@ -1,4 +1,5 @@
 use crate::engine::SimulationEngine;
+use crate::liquidity::LiquidityModel;
 use crate::price_path::GeometricBrownianMotion;
 use crate::volume::VolumeModel;
 use clmm_lp_domain::entities::position::Position;
@@ -6,11 +7,15 @@ use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
 use rust_decimal::Decimal;
 
 /// Runner for Monte Carlo simulations.
-pub struct MonteCarloRunner<V: VolumeModel + Clone> {
+pub struct MonteCarloRunner<V: VolumeModel + Clone, L: LiquidityModel + Clone> {
     /// The position to simulate.
     pub position: Position,
     /// The volume model.
     pub volume_model: V,
+    /// The liquidity model.
+    pub liquidity_model: L,
+    /// The fee rate.
+    pub fee_rate: Decimal,
     /// The initial price.
     pub initial_price: Decimal,
     /// The annualized drift.
@@ -41,7 +46,7 @@ pub struct AggregateResult {
     pub iterations: usize,
 }
 
-impl<V: VolumeModel + Clone> MonteCarloRunner<V> {
+impl<V: VolumeModel + Clone, L: LiquidityModel + Clone> MonteCarloRunner<V, L> {
     /// Runs the Monte Carlo simulation.
     pub fn run(&mut self) -> AggregateResult {
         let mut results: Vec<SimulationResult> = Vec::with_capacity(self.iterations);
@@ -56,8 +61,16 @@ impl<V: VolumeModel + Clone> MonteCarloRunner<V> {
 
             // Create a fresh volume model for each run if it has state
             let vol = self.volume_model.clone();
+            let liq = self.liquidity_model.clone();
 
-            let mut engine = SimulationEngine::new(self.position.clone(), gbm, vol, self.steps);
+            let mut engine = SimulationEngine::new(
+                self.position.clone(),
+                gbm,
+                vol,
+                liq,
+                self.fee_rate,
+                self.steps,
+            );
 
             results.push(engine.run());
         }

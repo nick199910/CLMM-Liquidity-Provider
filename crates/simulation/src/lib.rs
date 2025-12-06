@@ -3,6 +3,8 @@
 pub mod engine;
 /// Event definitions.
 pub mod event;
+/// Liquidity modeling.
+pub mod liquidity;
 /// Monte Carlo simulation logic.
 pub mod monte_carlo;
 /// Position simulation logic.

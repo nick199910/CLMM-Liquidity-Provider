@@ -4,6 +4,7 @@ use clmm_lp_domain::value_objects::OptimizationResult;
 use clmm_lp_domain::value_objects::price::Price;
 use clmm_lp_domain::value_objects::price_range::PriceRange;
 use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
+use clmm_lp_simulation::liquidity::ConstantLiquidity;
 use clmm_lp_simulation::monte_carlo::MonteCarloRunner;
 use clmm_lp_simulation::volume::ConstantVolume;
 use rust_decimal::Decimal;
@@ -30,6 +31,7 @@ impl RangeOptimizer {
     }
 
     /// Optimizes the price range for a given position.
+    #[allow(clippy::too_many_arguments)]
     pub fn optimize<O: ObjectiveFunction>(
         &self,
         base_position: Position,
@@ -37,6 +39,8 @@ impl RangeOptimizer {
         volatility: f64,
         drift: f64,
         volume: ConstantVolume,
+        pool_liquidity: u128,
+        fee_rate: Decimal,
         objective: O,
     ) -> OptimizationResult {
         // Candidate widths: 1%, 2%, 5%, 10%, 20%, 50%
@@ -47,6 +51,7 @@ impl RangeOptimizer {
 
         // Assume 1000 USD capital for estimation
         let _capital = Decimal::from(1000);
+        let liquidity_model = ConstantLiquidity::new(pool_liquidity);
 
         for width in widths {
             let lower_mult = Decimal::from_f64(1.0 - width).unwrap();
@@ -72,6 +77,8 @@ impl RangeOptimizer {
             let mut runner = MonteCarloRunner {
                 position: candidate_position,
                 volume_model: volume.clone(),
+                liquidity_model: liquidity_model.clone(),
+                fee_rate,
                 initial_price: current_price,
                 drift,
                 volatility,
@@ -148,6 +155,8 @@ mod tests {
             amount: Amount::new(U256::from(1000000), 6),
         };
         let current_price = Decimal::from(100);
+        let pool_liquidity = 100_000_000;
+        let fee_rate = Decimal::from_f64(0.003).unwrap();
 
         // Low volatility, optimize for PnL
         // Should prefer narrower range because fees > IL (with high volume/liquidity ratio assumption)
@@ -158,6 +167,8 @@ mod tests {
             0.1, // 10% vol
             0.0,
             volume,
+            pool_liquidity,
+            fee_rate,
             MaximizeNetPnL,
         );
 

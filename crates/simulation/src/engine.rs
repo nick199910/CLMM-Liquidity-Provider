@@ -1,3 +1,4 @@
+use crate::liquidity::LiquidityModel;
 use crate::price_path::PricePathGenerator;
 use crate::volume::VolumeModel;
 use clmm_lp_domain::entities::position::Position;
@@ -5,27 +6,39 @@ use clmm_lp_domain::metrics::impermanent_loss::calculate_il_concentrated;
 use clmm_lp_domain::value_objects::price::Price;
 use clmm_lp_domain::value_objects::simulation_result::SimulationResult;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 
 /// Engine for running simulations.
-pub struct SimulationEngine<P: PricePathGenerator, V: VolumeModel> {
+pub struct SimulationEngine<P: PricePathGenerator, V: VolumeModel, L: LiquidityModel> {
     /// The position to simulate.
     pub position: Position,
     /// The price path generator.
     pub price_path_generator: P,
     /// The volume model.
     pub volume_model: V,
+    /// The liquidity model for global pool liquidity.
+    pub liquidity_model: L,
+    /// The pool fee rate (e.g., 0.003 for 0.3%).
+    pub fee_rate: Decimal,
     /// The number of simulation steps.
     pub steps: usize,
 }
 
-impl<P: PricePathGenerator, V: VolumeModel> SimulationEngine<P, V> {
+impl<P: PricePathGenerator, V: VolumeModel, L: LiquidityModel> SimulationEngine<P, V, L> {
     /// Creates a new SimulationEngine.
-    pub fn new(position: Position, price_path_generator: P, volume_model: V, steps: usize) -> Self {
+    pub fn new(
+        position: Position,
+        price_path_generator: P,
+        volume_model: V,
+        liquidity_model: L,
+        fee_rate: Decimal,
+        steps: usize,
+    ) -> Self {
         Self {
             position,
             price_path_generator,
             volume_model,
+            liquidity_model,
+            fee_rate,
             steps,
         }
     }
@@ -70,13 +83,24 @@ impl<P: PricePathGenerator, V: VolumeModel> SimulationEngine<P, V> {
                 // Simplified: Fixed daily volume / steps per day
                 let vol = self.volume_model.next_volume().to_decimal();
 
-                // Fee share approx: Liquidity / GlobalLiquidity (unknown here, so we assume a share or standard calc)
-                // For now, let's assume we capture 0.1% of volume (very naive)
-                // TODO: Inject Pool state to know global liquidity
-                let fee_share = Decimal::from_f64(0.001).unwrap();
-                let fee_rate = Decimal::from_f64(0.003).unwrap(); // 0.3%
+                // Get global liquidity at current price
+                let global_liquidity = self.liquidity_model.get_liquidity_at_price(current_price);
 
-                let step_fees = vol * fee_share * fee_rate;
+                // Calculate fee share
+                let fee_share = if global_liquidity > 0 {
+                    let pos_liq = Decimal::from(self.position.liquidity_amount);
+                    let global_liq = Decimal::from(global_liquidity);
+                    // Cap share at 1.0 (100%)
+                    if pos_liq > global_liq {
+                        Decimal::ONE
+                    } else {
+                        pos_liq / global_liq
+                    }
+                } else {
+                    Decimal::ZERO
+                };
+
+                let step_fees = vol * fee_share * self.fee_rate;
                 total_fees_usd += step_fees;
             }
         }
@@ -106,6 +130,7 @@ impl<P: PricePathGenerator, V: VolumeModel> SimulationEngine<P, V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::liquidity::ConstantLiquidity;
     use crate::price_path::DeterministicPricePath;
     use crate::volume::ConstantVolume;
     use clmm_lp_domain::entities::position::Position;
@@ -113,6 +138,7 @@ mod tests {
     use clmm_lp_domain::value_objects::price::Price;
     use clmm_lp_domain::value_objects::{amount::Amount, price_range::PriceRange};
     use primitive_types::U256;
+    use rust_decimal::prelude::FromPrimitive;
     use uuid::Uuid;
 
     fn create_dummy_position() -> Position {
@@ -139,9 +165,13 @@ mod tests {
     #[test]
     fn test_simulation_flat_price() {
         let position = create_dummy_position();
+        // 1,000,000 units with 6 decimals = 1,000,000 * 10^6 raw
+        let raw_amount = U256::from(1_000_000) * U256::from(1_000_000);
         let volume = ConstantVolume {
-            amount: Amount::new(U256::from(1000000), 6),
+            amount: Amount::new(raw_amount, 6),
         };
+        let liquidity_model = ConstantLiquidity::new(10000); // 10x position liquidity
+        let fee_rate = Decimal::from_f64(0.003).unwrap();
 
         // Price stays at 100 (in range 90-110)
         let prices = vec![
@@ -151,13 +181,21 @@ mod tests {
         ];
         let path_gen = DeterministicPricePath { prices };
 
-        let mut engine = SimulationEngine::new(position, path_gen, volume, 3);
+        let mut engine =
+            SimulationEngine::new(position, path_gen, volume, liquidity_model, fee_rate, 3);
         let result = engine.run();
 
         // No price change -> 0 IL
         assert_eq!(result.total_il, Decimal::ZERO);
         // Fees should be accumulated
+        // Share = 1000 / 10000 = 0.1
+        // Vol = 1,000,000
+        // Fee Rate = 0.003
+        // Fees per step = 1M * 0.1 * 0.003 = 300
+        // Total (3 steps) = 900
         assert!(result.total_fees_earned > Decimal::ZERO);
+        assert_eq!(result.total_fees_earned, Decimal::from(900));
+
         // Time in range should be 100% (3/3)
         assert_eq!(result.time_in_range_percentage, Decimal::ONE);
     }
@@ -168,6 +206,8 @@ mod tests {
         let volume = ConstantVolume {
             amount: Amount::new(U256::from(1000000), 6),
         };
+        let liquidity_model = ConstantLiquidity::new(10000);
+        let fee_rate = Decimal::from_f64(0.003).unwrap();
 
         // Price moves to 120 (out of range 90-110)
         let prices = vec![
@@ -176,18 +216,10 @@ mod tests {
         ];
         let path_gen = DeterministicPricePath { prices };
 
-        let mut engine = SimulationEngine::new(position, path_gen, volume, 2);
+        let mut engine =
+            SimulationEngine::new(position, path_gen, volume, liquidity_model, fee_rate, 2);
         let result = engine.run();
 
-        // 1 step in range (100), 1 step out (120).
-        // Logic checks range for each step. If range check is simple inclusive:
-        // Step 0: 100 (in). Step 1: 120 (out).
-        // Note: The engine currently iterates provided prices.
-        // If generator returns 2 prices, we check both?
-        // Usually simulation steps imply transitions.
-        // Here we treat price points as snapshots.
-        // 100 is in. 120 is out.
-        // So 50% time in range.
         assert_eq!(
             result.time_in_range_percentage,
             Decimal::from_f64(0.5).unwrap()
