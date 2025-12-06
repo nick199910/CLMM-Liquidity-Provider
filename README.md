@@ -2,7 +2,6 @@
 
 [![Dual License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/clmm-liquidity-provider.svg)](https://crates.io/crates/clmm-liquidity-provider)
-[![Downloads](https://img.shields.io/crates/d/clmm-liquidity-provider.svg)](https://crates.io/crates/clmm-liquidity-provider)
 [![Stars](https://img.shields.io/github/stars/joaquinbejar/CLMM-Liquidity-Provider.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/stargazers)
 [![Issues](https://img.shields.io/github/issues/joaquinbejar/CLMM-Liquidity-Provider.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/issues)
 [![PRs](https://img.shields.io/github/issues-pr/joaquinbejar/CLMM-Liquidity-Provider.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/pulls)
