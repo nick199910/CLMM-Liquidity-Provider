@@ -6,6 +6,7 @@ use clmm_lp_domain::prelude::*;
 use clmm_lp_optimization::prelude::*;
 use clmm_lp_simulation::prelude::*;
 use dotenv::dotenv;
+use prettytable::{Table, row};
 use primitive_types::U256;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
@@ -174,25 +175,24 @@ async fn main() -> Result<()> {
                 )
                 .await?;
 
-            info!("✅ Fetched {} candles:", candles.len());
-            info!(
-                "{:<20} | {:<10} | {:<10} | {:<10} | {:<10}",
-                "Time", "Open", "High", "Low", "Close"
-            );
-            info!("{}", "-".repeat(70));
+            println!("✅ Fetched {} candles:", candles.len());
+            println!();
+
+            let mut table = Table::new();
+            table.add_row(row!["Time", "Open", "High", "Low", "Close"]);
 
             for candle in candles {
                 let datetime = chrono::DateTime::from_timestamp(candle.start_timestamp as i64, 0)
                     .unwrap_or_default();
-                info!(
-                    "{:<20} | {:<10.4} | {:<10.4} | {:<10.4} | {:<10.4}",
+                table.add_row(row![
                     datetime.format("%Y-%m-%d %H:%M"),
-                    candle.open.value,
-                    candle.high.value,
-                    candle.low.value,
-                    candle.close.value
-                );
+                    format!("{:.4}", candle.open.value),
+                    format!("{:.4}", candle.high.value),
+                    format!("{:.4}", candle.low.value),
+                    format!("{:.4}", candle.close.value)
+                ]);
             }
+            table.printstd();
         }
         Commands::Backtest {
             symbol_a,
@@ -470,7 +470,7 @@ fn calculate_volatility(prices: &[f64]) -> f64 {
     std_dev * (8760.0_f64).sqrt()
 }
 
-/// Prints a rich backtest report.
+/// Prints a rich backtest report using prettytable.
 #[allow(clippy::too_many_arguments)]
 fn print_backtest_report(
     symbol: &str,
@@ -494,60 +494,80 @@ fn print_backtest_report(
     };
 
     println!();
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!(
-        "║              📊 BACKTEST RESULTS: {}/USDC                   ║",
-        symbol
-    );
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ Period: {} days | Strategy: {:?}", days, strategy);
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ POSITION CONFIGURATION                                       ║");
-    println!("║   Price Range: ${:.2} - ${:.2}", lower, upper);
-    println!("║   Entry Price: ${:.4}", entry_price);
-    println!(
-        "║   Final Price: ${:.4} ({:+.2}%)",
-        final_price, price_change_pct
-    );
-    println!("║   Initial Capital: ${:.2}", capital);
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ PERFORMANCE METRICS                                          ║");
-    println!("║   Final Value:      ${:.2}", summary.final_value);
-    println!(
-        "║   Net PnL:          ${:+.2} ({:+.2}%)",
-        summary.final_pnl, return_pct
-    );
-    println!("║   Fees Earned:      ${:.2}", summary.total_fees);
-    println!(
-        "║   Impermanent Loss: {:.2}%",
-        summary.final_il_pct * Decimal::from(100)
-    );
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ RISK METRICS                                                 ║");
-    println!(
-        "║   Time in Range:    {:.1}%",
-        summary.time_in_range_pct * Decimal::from(100)
-    );
-    println!(
-        "║   Max Drawdown:     {:.2}%",
-        summary.max_drawdown * Decimal::from(100)
-    );
-    println!(
-        "║   Rebalances:       {} (cost: ${:.2})",
-        summary.rebalance_count, summary.total_rebalance_cost
-    );
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ COMPARISON                                                   ║");
-    println!("║   HODL Value:       ${:.2}", summary.hodl_value);
-    println!(
-        "║   vs HODL:          ${:+.2} ({:+.2}%)",
-        summary.vs_hodl, vs_hodl_pct
-    );
-    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!("📊 BACKTEST RESULTS: {}/USDC", symbol);
+    println!("Period: {} days | Strategy: {:?}", days, strategy);
+    println!();
+
+    // Position Configuration Table
+    let mut config_table = Table::new();
+    config_table.add_row(row!["POSITION CONFIGURATION", ""]);
+    config_table.add_row(row![
+        "Price Range",
+        format!("${:.2} - ${:.2}", lower, upper)
+    ]);
+    config_table.add_row(row!["Entry Price", format!("${:.4}", entry_price)]);
+    config_table.add_row(row![
+        "Final Price",
+        format!("${:.4} ({:+.2}%)", final_price, price_change_pct)
+    ]);
+    config_table.add_row(row!["Initial Capital", format!("${:.2}", capital)]);
+    config_table.printstd();
+
+    println!();
+
+    // Performance Metrics Table
+    let mut perf_table = Table::new();
+    perf_table.add_row(row!["PERFORMANCE METRICS", ""]);
+    perf_table.add_row(row!["Final Value", format!("${:.2}", summary.final_value)]);
+    perf_table.add_row(row![
+        "Net PnL",
+        format!("${:+.2} ({:+.2}%)", summary.final_pnl, return_pct)
+    ]);
+    perf_table.add_row(row!["Fees Earned", format!("${:.2}", summary.total_fees)]);
+    perf_table.add_row(row![
+        "Impermanent Loss",
+        format!("{:.2}%", summary.final_il_pct * Decimal::from(100))
+    ]);
+    perf_table.printstd();
+
+    println!();
+
+    // Risk Metrics Table
+    let mut risk_table = Table::new();
+    risk_table.add_row(row!["RISK METRICS", ""]);
+    risk_table.add_row(row![
+        "Time in Range",
+        format!("{:.1}%", summary.time_in_range_pct * Decimal::from(100))
+    ]);
+    risk_table.add_row(row![
+        "Max Drawdown",
+        format!("{:.2}%", summary.max_drawdown * Decimal::from(100))
+    ]);
+    risk_table.add_row(row![
+        "Rebalances",
+        format!(
+            "{} (cost: ${:.2})",
+            summary.rebalance_count, summary.total_rebalance_cost
+        )
+    ]);
+    risk_table.printstd();
+
+    println!();
+
+    // Comparison Table
+    let mut comp_table = Table::new();
+    comp_table.add_row(row!["COMPARISON vs HODL", ""]);
+    comp_table.add_row(row!["HODL Value", format!("${:.2}", summary.hodl_value)]);
+    comp_table.add_row(row![
+        "LP vs HODL",
+        format!("${:+.2} ({:+.2}%)", summary.vs_hodl, vs_hodl_pct)
+    ]);
+    comp_table.printstd();
+
     println!();
 }
 
-/// Prints optimization results.
+/// Prints optimization results using prettytable.
 fn print_optimization_report(
     symbol: &str,
     current_price: f64,
@@ -562,33 +582,49 @@ fn print_optimization_report(
     .round_dp(1);
 
     println!();
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!(
-        "║           🎯 OPTIMIZATION RESULTS: {}/USDC                  ║",
-        symbol
-    );
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ MARKET CONDITIONS                                            ║");
-    println!("║   Current Price:    ${:.4}", current_price);
-    println!(
-        "║   Volatility:       {:.1}% (annualized)",
-        volatility * 100.0
-    );
-    println!("║   Capital:          ${:.2}", capital);
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ RECOMMENDED RANGE                                            ║");
-    println!("║   Lower Bound:      ${:.4}", lower);
-    println!("║   Upper Bound:      ${:.4}", upper);
-    println!("║   Range Width:      {}%", width_pct);
-    println!("╠══════════════════════════════════════════════════════════════╣");
-    println!("║ EXPECTED PERFORMANCE (per simulation period)                 ║");
-    println!("║   Expected PnL:     ${:+.4}", result.expected_pnl);
-    println!("║   Expected Fees:    ${:.4}", result.expected_fees);
-    println!("║   Expected IL:      ${:.4}", result.expected_il);
+    println!("🎯 OPTIMIZATION RESULTS: {}/USDC", symbol);
+    println!();
+
+    // Market Conditions Table
+    let mut market_table = Table::new();
+    market_table.add_row(row!["MARKET CONDITIONS", ""]);
+    market_table.add_row(row!["Current Price", format!("${:.4}", current_price)]);
+    market_table.add_row(row![
+        "Volatility (annualized)",
+        format!("{:.1}%", volatility * 100.0)
+    ]);
+    market_table.add_row(row!["Capital", format!("${:.2}", capital)]);
+    market_table.printstd();
+
+    println!();
+
+    // Recommended Range Table
+    let mut range_table = Table::new();
+    range_table.add_row(row!["RECOMMENDED RANGE", ""]);
+    range_table.add_row(row!["Lower Bound", format!("${:.4}", lower)]);
+    range_table.add_row(row!["Upper Bound", format!("${:.4}", upper)]);
+    range_table.add_row(row!["Range Width", format!("{}%", width_pct)]);
+    range_table.printstd();
+
+    println!();
+
+    // Expected Performance Table
+    let mut perf_table = Table::new();
+    perf_table.add_row(row!["EXPECTED PERFORMANCE", ""]);
+    perf_table.add_row(row![
+        "Expected PnL",
+        format!("${:+.4}", result.expected_pnl)
+    ]);
+    perf_table.add_row(row![
+        "Expected Fees",
+        format!("${:.4}", result.expected_fees)
+    ]);
+    perf_table.add_row(row!["Expected IL", format!("${:.4}", result.expected_il)]);
     if let Some(sharpe) = result.sharpe_ratio {
-        println!("║   Sharpe Ratio:     {:.2}", sharpe);
+        perf_table.add_row(row!["Sharpe Ratio", format!("{:.2}", sharpe)]);
     }
-    println!("╚══════════════════════════════════════════════════════════════╝");
+    perf_table.printstd();
+
     println!();
     println!("💡 Tip: Use these bounds with the backtest command:");
     println!(

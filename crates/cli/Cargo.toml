@@ -24,4 +24,5 @@ rust_decimal = { workspace = true }
 primitive-types = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
+prettytable-rs = { workspace = true }
 
