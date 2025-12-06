@@ -2,6 +2,29 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
+/// A wrapper struct representing a percentage value, built on top of a `Decimal` type.
+///
+/// The `Percentage` struct is primarily used to represent percentage values in a clear
+/// and type-safe manner. This struct encapsulates a `Decimal` value, ensuring that it
+/// can be used for precise arithmetic operations without losing accuracy, as percentages
+/// often require precision beyond simple floating-point representations.
+///
+/// # Derives
+/// - `Debug`: Allows this struct to be formatted using the `{:?}` formatter for debugging purposes.
+/// - `Clone`: Enables the creation of a duplicate of a `Percentage` value.
+/// - `Copy`: Allows the `Percentage` struct to be copied rather than moved,
+///   making it convenient and efficient for use in computations.
+/// - `Serialize`: Allows a `Percentage` value to be serialized, which is especially useful
+///   for saving or transferring the value as part of an external format (e.g., JSON).
+/// - `Deserialize`: Enables deserialization of a `Percentage` value from an external format,
+///   allowing it to be reconstructed from serialized data.
+///
+/// # Fields
+/// - `0` (`Decimal`): A wrapped `Decimal` value representing the percentage value.
+///
+/// The `Percentage` struct is designed to be flexible and precise for use cases
+/// involving financial computations, statistics, or any domain requiring accurate
+/// representation of percentages.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Percentage(pub Decimal);
 
@@ -21,7 +44,7 @@ impl Percentage {
         Self(Decimal::from(bps) / Decimal::from(10000))
     }
 
-    /// Converts the stored `Decimal` value into basis points (bps) and returns it as a `u32`.
+    /// Converts the Percentage to basis points (bps).
     ///
     /// Basis points are calculated by multiplying the internal value by 10,000. The conversion
     /// is performed using the `Decimal::from(10000)` multiplier and then casting the resulting

@@ -1,8 +1,13 @@
 //! Protocol adapters and interfaces.
+/// Orca protocol adapter.
 pub mod orca;
+/// Data parsers.
 pub mod parsers;
+/// Raydium protocol adapter.
 pub mod raydium;
+/// RPC utilities.
 pub mod rpc;
+/// Solana client wrapper.
 pub mod solana_client; // Whirlpools
 
 use anyhow::Result;

@@ -1,5 +1,7 @@
 //! Data ingestion and storage.
+/// Data providers.
 pub mod providers;
+/// Data repositories.
 pub mod repository;
 
 use anyhow::Result;

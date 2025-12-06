@@ -6,18 +6,19 @@ use serde::{Deserialize, Serialize};
 /// This struct aggregates various performance metrics such as final value,
 /// fees earned, impermanent loss, and risk measures like maximum drawdown
 /// and Sharpe ratio to evaluate the effectiveness of a liquidity strategy.
+/// Result of a simulation run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationResult {
-    /// The total value of the position at the end of the simulation (usually in USD or quote currency).
+    /// Final value of the position.
     pub final_position_value: Decimal,
 
-    /// The total amount of fees collected during the simulation period.
+    /// Total fees earned.
     pub total_fees_earned: Decimal,
 
-    /// The calculated total Impermanent Loss (IL).
-    /// Represents the opportunity cost of providing liquidity versus holding the assets.
+    /// Total impermanent loss.
     pub total_il: Decimal,
 
+    /// Net Profit and Loss.
     /// The Net Profit and Loss (PnL) of the strategy.
     /// Typically calculated as `(Final Value + Fees) - Initial Value`.
     pub net_pnl: Decimal,

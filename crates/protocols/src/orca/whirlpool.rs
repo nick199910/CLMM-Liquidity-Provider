@@ -61,11 +61,11 @@ impl WhirlpoolParser {
     ///
     /// # Parameters
     /// - `_data`: A reference to a byte slice containing the binary representation of the data
-    /// to be parsed. The data is expected to adhere to a specific structure and layout.
+    ///   to be parsed. The data is expected to adhere to a specific structure and layout.
     ///
     /// # Returns
     /// - `Option<u128>`: If parsing succeeds, returns `Some(u128)` containing the liquidity value.
-    /// If parsing fails, returns `None`.
+    ///   If parsing fails, returns `None`.
     ///
     /// # Remarks
     /// - This function assumes a specific offset based on the underlying structure of the data:
@@ -79,11 +79,11 @@ impl WhirlpoolParser {
     ///   - Total: 49 bytes before liquidity data.
     /// - Liquidity data is expected to start at byte offset 49.
     /// - The specific offsets and structure of the data should be validated using the associated
-    /// Interface Definition Language (IDL) for accuracy.
+    ///   Interface Definition Language (IDL) for accuracy.
     /// - Currently, this implementation is incomplete and only serves as a placeholder. Proper
-    /// parsing logic is yet to be implemented.
+    ///   parsing logic is yet to be implemented.
     /// - If the assumed struct or offset is incorrect, updates to the structure or parsing logic
-    /// will be necessary to correctly retrieve the liquidity value.
+    ///   will be necessary to correctly retrieve the liquidity value.
     ///
     /// # TODO
     /// - Replace placeholder with actual parsing logic.

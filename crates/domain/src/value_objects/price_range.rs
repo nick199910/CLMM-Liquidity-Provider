@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 /// A struct representing a price range with a lower and upper price bound.
 ///
-/// The `PriceRange` struct is used to define a range of prices within a 
+/// The `PriceRange` struct is used to define a range of prices within a
 /// specific lower and upper limit. This can be helpful in scenarios such
-/// as filtering items, setting bounds for pricing algorithms, or defining 
+/// as filtering items, setting bounds for pricing algorithms, or defining
 /// ranges for user-input limits.
 ///
 /// ## Fields
@@ -25,14 +25,17 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: The `Price` type must be predefined with your desired implementation
 /// in order to use this struct effectively.
+/// Represents a price range.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceRange {
+    /// The lower bound price.
     pub lower_price: Price,
+    /// The upper bound price.
     pub upper_price: Price,
 }
 
 impl PriceRange {
-    /// Creates a new instance of the type with specified lower and upper price bounds.
+    /// Creates a new PriceRange.
     ///
     /// # Parameters
     /// - `lower`: The lower bound of the price. This parameter defines the minimum price value.
@@ -54,7 +57,7 @@ impl PriceRange {
     /// - `price`: A `Price` instance representing the value to check.
     ///
     /// # Returns
-    /// - `true` if the price is greater than or equal to the lower bound (`self.lower_price`) 
+    /// - `true` if the price is greater than or equal to the lower bound (`self.lower_price`)
     ///   and less than or equal to the upper bound (`self.upper_price`).
     /// - `false` otherwise.
     ///

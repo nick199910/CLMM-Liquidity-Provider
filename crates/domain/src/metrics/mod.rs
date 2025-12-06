@@ -2,7 +2,9 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 /// Metrics for analysis.
+/// Fee related metrics.
 pub mod fees;
+/// Impermanent loss metrics.
 pub mod impermanent_loss;
 
 /// Represents impermanent loss.

@@ -178,6 +178,7 @@ impl MarketDataProvider for BirdeyeProvider {
 }
 
 /// Mock Provider for Testing
+/// Mock market data provider for testing purposes.
 pub struct MockMarketDataProvider;
 
 #[async_trait]
