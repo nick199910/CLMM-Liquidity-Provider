@@ -1,5 +1,3 @@
-
-
 [![Dual License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/clmm-liquidity-provider.svg)](https://crates.io/crates/clmm-liquidity-provider)
 [![Stars](https://img.shields.io/github/stars/joaquinbejar/CLMM-Liquidity-Provider.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/stargazers)
@@ -63,13 +61,13 @@ graph TD
 
 | Crate | Description |
 |-------|-------------|
-| **`clmm-lp-domain`** | Core entities, value objects, and pure mathematical logic (CLMM math, IL calc). |
-| **`clmm-lp-simulation`** | Backtesting engine, price path generation, and position simulation. |
-| **`clmm-lp-optimization`** | Strategy optimization algorithms (Grid Search, Genetic Algorithms). |
-| **`clmm-lp-protocols`** | Adapters for Solana protocols (Raydium, Orca, Meteora). |
-| **`clmm-lp-execution`** | Live execution engine, wallet management, and transaction building. |
-| **`clmm-lp-data`** | Data ingestion, historical price fetching, and storage repositories. |
-| **`clmm-lp-cli`** | Command-line interface for running simulations and optimizations. |
+| **`clmm-lp-domain`** | Core entities, value objects, CLMM math, tick calculations, and IL formulas. |
+| **`clmm-lp-simulation`** | Backtesting engine, price path generators, rebalancing strategies, and position simulation. |
+| **`clmm-lp-optimization`** | Strategy optimization with Grid Search, objective functions (PnL, Sharpe, IL minimization). |
+| **`clmm-lp-protocols`** | Solana protocol adapters (Orca Whirlpools, Raydium CLMM), RPC provider with failover. |
+| **`clmm-lp-execution`** | Live monitoring, PnL tracking, alerts, wallet management, transaction building, strategy execution. |
+| **`clmm-lp-data`** | Data providers (Birdeye, Jupiter), caching, PostgreSQL repositories. |
+| **`clmm-lp-cli`** | CLI with analyze, backtest, optimize, and data commands. Table/chart/export output. |
 | **`clmm-lp-api`** | REST API for external integrations and dashboards. |
 
 ---
@@ -92,26 +90,62 @@ graph TD
 The project is being built in incremental phases.
 
 - [x] **Phase 0: Foundation** (Project structure, CI/CD, Makefile)
-- [ ] **Phase 1: Core Domain Models** (CLMM Math, IL Calculator, basic types)
-- [ ] **Phase 2: Simulation Engine** (Backtesting framework, simplistic models)
-- [ ] **Phase 3: Data Integration** (Birdeye/Jupiter providers, Caching)
-- [ ] **Phase 4: Optimization Engine** (Objective functions, Range optimizer)
-- [ ] **Phase 5: CLI & Reporting** (User tools, Charts, Exports)
-- [ ] **Phase 6: Database & Persistence** (PostgreSQL schema, Repositories)
-- [ ] **Phase 7: Blockchain Integration** (RPC connection, On-chain state parsing)
-- [ ] **Phase 8: Live Monitoring** (Real-time PnL tracking, Alerts)
-- [ ] **Phase 9: Transaction Execution** (Wallet, Transaction builder, Slippage protection)
-- [ ] **Phase 10: Strategy Automation** (Automated rebalancing, Decision engine)
+- [x] **Phase 1: Core Domain Models** (CLMM Math, IL Calculator, basic types)
+- [x] **Phase 2: Simulation Engine** (Backtesting framework, rebalancing strategies)
+- [x] **Phase 3: Data Integration** (Birdeye/Jupiter providers, Caching)
+- [x] **Phase 4: Optimization Engine** (Objective functions, Range optimizer, Grid Search)
+- [x] **Phase 5: CLI & Reporting** (Commands, Tables, Charts, JSON/CSV/HTML exports)
+- [x] **Phase 6: Database & Persistence** (PostgreSQL schema, Repositories)
+- [x] **Phase 7: Blockchain Integration** (RPC provider with failover, Pool/Position readers)
+- [x] **Phase 8: Live Monitoring** (Position monitor, PnL tracker, Alert system)
+- [x] **Phase 9: Transaction Execution** (Wallet management, Transaction builder, Strategy executor)
+- [ ] **Phase 10: Strategy Automation** (Full automation loop, WebSocket subscriptions)
 - [ ] **Phase 11: REST API** (Web interface access)
+
+---
+
+## ✨ Features
+
+### Core Capabilities
+
+- **CLMM Mathematics**: Full implementation of concentrated liquidity math (tick ↔ price, sqrt_price, liquidity calculations)
+- **Impermanent Loss**: Precise IL calculation for concentrated positions with range boundaries
+- **Backtesting**: Simulate LP positions against historical price data with multiple rebalancing strategies
+- **Optimization**: Find optimal tick ranges using Grid Search with configurable objective functions
+- **Multi-Protocol**: Support for Orca Whirlpools, Raydium CLMM (Meteora DLMM planned)
+
+### Rebalancing Strategies
+
+| Strategy | Description |
+|----------|-------------|
+| **Static** | Hold position without rebalancing |
+| **Periodic** | Rebalance at fixed time intervals |
+| **Threshold** | Rebalance when price moves beyond threshold |
+| **IL Limit** | Rebalance when impermanent loss exceeds limit |
+
+### Optimization Objectives
+
+- **Maximize Net PnL** - Total return after fees and IL
+- **Maximize Fee Earnings** - Focus on fee capture
+- **Maximize Sharpe Ratio** - Risk-adjusted returns
+- **Minimize IL** - Conservative IL minimization
+- **Maximize Time in Range** - Optimize for range efficiency
+
+### Live Monitoring
+
+- **Position Tracking**: Real-time position state from on-chain
+- **PnL Calculation**: Entry value, current value, fees, IL, net PnL, APY
+- **Alert System**: Configurable rules for range exit, IL thresholds, PnL targets
+- **Multi-Channel Notifications**: Console, file, webhook
 
 ---
 
 ## ⚡️ Quick Start
 
 ### Prerequisites
-- Rust (latest stable)
+- Rust (latest stable, edition 2024)
 - Make
-- Docker (optional, for DB/tests)
+- Docker (optional, for PostgreSQL)
 
 ### Common Commands
 
@@ -137,26 +171,70 @@ make lint-fix
 make doc-open
 ```
 
+### CLI Usage
+
+```bash
+# Analyze a trading pair
+clmm-lp-cli analyze --symbol-a SOL --symbol-b USDC --days 30
+
+# Run a backtest with periodic rebalancing
+clmm-lp-cli backtest --symbol-a SOL --symbol-b USDC \
+  --capital 10000 --lower-price 80 --upper-price 120 \
+  --strategy periodic --rebalance-interval 24
+
+# Optimize range parameters
+clmm-lp-cli optimize --symbol-a SOL --symbol-b USDC \
+  --capital 10000 --objective sharpe
+
+# Fetch and cache market data
+clmm-lp-cli data fetch --symbol SOL --days 90
+```
+
+### Output Formats
+
+The CLI supports multiple output formats:
+
+- **Table**: Rich formatted tables (default)
+- **JSON**: Machine-readable JSON output
+- **CSV**: Spreadsheet-compatible export
+- **HTML**: Web-ready reports
+- **Markdown**: Documentation-friendly format
+
 ---
 
 ## 📂 Project Structure
 
 ```text
 clmm-lp-optimizer/
-├── Cargo.toml          # Workspace configuration
-├── Makefile            # Task runner
+├── Cargo.toml              # Workspace configuration
+├── Makefile                # Task runner
 ├── crates/
-│   ├── api/            # REST API endpoints
-│   ├── cli/            # CLI entry point
-│   ├── data/           # Data providers (Coingecko, Birdeye)
-│   ├── domain/         # Core business logic & models
-│   ├── execution/      # On-chain transaction executors
-│   ├── optimization/   # Genetic/Grid search algorithms
-│   ├── protocols/      # Raydium/Orca/Meteora adapters
-│   └── simulation/     # Backtesting engine
-└── doc/                # Detailed documentation
-    ├── steps.md        # Implementation roadmap
-    └── resume.md       # Project overview
+│   ├── api/                # REST API endpoints (Axum)
+│   ├── cli/                # CLI with commands and output formatting
+│   │   ├── commands/       # analyze, backtest, optimize, data
+│   │   └── output/         # table, chart, export modules
+│   ├── data/               # Data providers (Birdeye, Jupiter, cache)
+│   ├── domain/             # Core business logic & CLMM math
+│   │   ├── entities/       # Pool, Position, Token
+│   │   ├── metrics/        # IL, fees, PnL calculations
+│   │   └── math/           # Tick math, liquidity, sqrt_price
+│   ├── execution/          # Live execution engine
+│   │   ├── alerts/         # Alert rules and notifiers
+│   │   ├── monitor/        # Position monitor, PnL tracker
+│   │   ├── strategy/       # Decision engine, executor
+│   │   ├── transaction/    # Builder, manager
+│   │   └── wallet/         # Wallet management
+│   ├── optimization/       # Grid search, objective functions
+│   ├── protocols/          # Protocol adapters
+│   │   ├── orca/           # Whirlpool reader, position reader
+│   │   ├── rpc/            # RPC provider with health checks
+│   │   └── events/         # Event fetcher and parser
+│   └── simulation/         # Backtesting engine
+│       ├── models/         # Price path, volume, liquidity
+│       └── strategies/     # Static, Periodic, Threshold, IL Limit
+└── doc/                    # Detailed documentation
+    ├── steps.md            # Implementation roadmap
+    └── resume.md           # Project overview
 ```
 
 ## 🧪 Testing Strategy

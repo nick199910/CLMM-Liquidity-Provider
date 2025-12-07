@@ -11,7 +11,22 @@
 // Traits
 pub use crate::PoolFetcher;
 
+// RPC provider
+pub use crate::rpc::{CommitmentLevel, EndpointHealth, HealthChecker, RpcConfig, RpcProvider};
+
+// Events
+pub use crate::events::{
+    ClosePositionEvent, CollectFeesEvent, EventFetcher, EventParser, FetchConfig, LiquidityEvent,
+    OnChainPosition, OpenPositionEvent, Protocol, ProtocolEvent, SwapEvent, VolumeData,
+    WhirlpoolInstruction,
+};
+
 // Orca
+pub use crate::orca::pool_reader::{
+    WHIRLPOOL_PROGRAM_ID, WhirlpoolReader, WhirlpoolState, calculate_tick_range, price_to_tick,
+    tick_to_price,
+};
+pub use crate::orca::position_reader::{PositionReader, WhirlpoolPosition};
 pub use crate::orca::provider::OrcaPoolProvider;
 pub use crate::orca::whirlpool::{Whirlpool, WhirlpoolParser};
 
