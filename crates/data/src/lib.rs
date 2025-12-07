@@ -3,6 +3,8 @@
 /// Prelude module for convenient imports.
 pub mod prelude;
 
+/// Caching layer for market data.
+pub mod cache;
 /// Historical pool state structures.
 pub mod pool_state;
 /// Data providers.

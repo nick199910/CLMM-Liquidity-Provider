@@ -6,8 +6,11 @@
 mod birdeye;
 /// CSV provider module for file-based data loading.
 pub mod csv_provider;
+/// Jupiter Price API provider.
+pub mod jupiter;
 mod mock;
 
 pub use birdeye::BirdeyeProvider;
 pub use csv_provider::CsvProvider;
+pub use jupiter::JupiterProvider;
 pub use mock::MockMarketDataProvider;

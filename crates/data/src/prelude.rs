@@ -11,12 +11,17 @@
 // Traits
 pub use crate::MarketDataProvider;
 
+// Cache
+pub use crate::cache::{
+    Cache, CacheEntry, CacheKeyBuilder, CachedProvider, FileCache, MemoryCache,
+};
+
 // Pool state
 pub use crate::pool_state::{PoolStateHistory, PoolStateSnapshot};
 
 // Providers
 pub use crate::providers::csv_provider::write_candles_to_csv;
-pub use crate::providers::{BirdeyeProvider, CsvProvider, MockMarketDataProvider};
+pub use crate::providers::{BirdeyeProvider, CsvProvider, JupiterProvider, MockMarketDataProvider};
 
 // Database repositories
 pub use crate::repositories::{
