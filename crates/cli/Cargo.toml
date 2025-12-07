@@ -25,4 +25,11 @@ primitive-types = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
 prettytable-rs = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+rand = { workspace = true }
+dirs = "5.0"
+
+[dev-dependencies]
+rust_decimal_macros = { workspace = true }
 

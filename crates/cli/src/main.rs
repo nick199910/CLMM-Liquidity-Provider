@@ -1,4 +1,8 @@
 //! Command Line Interface for the CLMM Liquidity Provider.
+
+pub mod commands;
+pub mod output;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use clmm_lp_data::prelude::*;
