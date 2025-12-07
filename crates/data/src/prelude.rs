@@ -11,6 +11,9 @@
 // Traits
 pub use crate::MarketDataProvider;
 
+// Pool state
+pub use crate::pool_state::{PoolStateHistory, PoolStateSnapshot};
+
 // Providers
 pub use crate::providers::csv_provider::write_candles_to_csv;
 pub use crate::providers::{BirdeyeProvider, CsvProvider, MockMarketDataProvider};
@@ -20,3 +23,9 @@ pub use crate::repositories::{
     Database, OptimizationRecord, PoolRecord, PoolRepository, PriceRecord, PriceRepository,
     SimulationRecord, SimulationRepository, SimulationResultRecord,
 };
+
+// In-memory repository
+pub use crate::repository::{SimulationDataRepository, SimulationDataRepositoryBuilder};
+
+// Time series
+pub use crate::timeseries::{OhlcvCandle, TimeSeries};

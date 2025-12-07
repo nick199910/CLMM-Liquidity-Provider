@@ -3,12 +3,16 @@
 /// Prelude module for convenient imports.
 pub mod prelude;
 
+/// Historical pool state structures.
+pub mod pool_state;
 /// Data providers.
 pub mod providers;
 /// Database repositories.
 pub mod repositories;
-/// Data repositories (legacy).
+/// In-memory data repository for simulation.
 pub mod repository;
+/// Time series data structures.
+pub mod timeseries;
 
 use anyhow::Result;
 use async_trait::async_trait;
