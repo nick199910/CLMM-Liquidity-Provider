@@ -12,11 +12,23 @@ description = { workspace = true }
 [dependencies]
 clmm-lp-domain = { workspace = true }
 clmm-lp-execution = { workspace = true }
+clmm-lp-protocols = { workspace = true }
 clmm-lp-data = { workspace = true }
-axum = { workspace = true }
+clmm-lp-simulation = { workspace = true }
+clmm-lp-optimization = { workspace = true }
+axum = { workspace = true, features = ["ws"] }
 serde = { workspace = true }
-tokio = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
 tower = { workspace = true }
-tower-http = { workspace = true }
+tower-http = { workspace = true, features = ["cors", "trace", "timeout", "limit"] }
 thiserror = { workspace = true }
+anyhow = { workspace = true }
+rust_decimal = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+solana-sdk = { workspace = true }
+futures = { workspace = true }
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
