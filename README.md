@@ -4,7 +4,7 @@
 [![PRs](https://img.shields.io/github/issues-pr/joaquinbejar/CLMM-Liquidity-Provider.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/pulls)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/joaquinbejar/CLMM-Liquidity-Provider/build.yml)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/CLMM-Liquidity-Provider)](https://codecov.io/gh/joaquinbejar/CLMM-Liquidity-Provider)
-[![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust Version](https://img.shields.io/badge/rust-1.90%2B-orange.svg)](https://www.rust-lang.org/)
 
 ### Crates
 

@@ -9,6 +9,14 @@ homepage = { workspace = true }
 documentation = { workspace = true }
 description = { workspace = true }
 
+[[bin]]
+name = "clmm-lp-api"
+path = "src/main.rs"
+
+[lib]
+name = "clmm_lp_api"
+path = "src/lib.rs"
+
 [dependencies]
 clmm-lp-domain = { workspace = true }
 clmm-lp-execution = { workspace = true }
@@ -21,6 +29,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true, features = ["cors", "trace", "timeout", "limit"] }
 thiserror = { workspace = true }

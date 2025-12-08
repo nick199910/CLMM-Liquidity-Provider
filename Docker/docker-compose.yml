@@ -1,0 +1,174 @@
+# Docker Compose for CLMM Liquidity Provider
+# Designed for Docker Swarm deployment
+#
+# Deploy with: docker stack deploy -c docker-compose.yml clmm-lp
+# Remove with: docker stack rm clmm-lp
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clmm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clmm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-clmm_lp}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clmm-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clmm_user} -d ${POSTGRES_DB:-clmm_lp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ==========================================================================
+  # API Server (Rust)
+  # ==========================================================================
+  api:
+    image: ${REGISTRY:-ghcr.io}/${REPO:-joaquinbejar/clmm-liquidity-provider}/api:${VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Docker/api.Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-clmm_user}:${POSTGRES_PASSWORD:-clmm_password}@postgres:5432/${POSTGRES_DB:-clmm_lp}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      BIRDEYE_API_KEY: ${BIRDEYE_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "8080:8080"
+    networks:
+      - clmm-network
+    depends_on:
+      - postgres
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==========================================================================
+  # Web Dashboard (React)
+  # ==========================================================================
+  web:
+    image: ${REGISTRY:-ghcr.io}/${REPO:-joaquinbejar/clmm-liquidity-provider}/web:${VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Docker/web.Dockerfile
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://api:8080}
+    ports:
+      - "3000:80"
+    networks:
+      - clmm-network
+    depends_on:
+      - api
+    deploy:
+      replicas: ${WEB_REPLICAS:-2}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # CLI (for running commands/migrations)
+  # ==========================================================================
+  cli:
+    image: ${REGISTRY:-ghcr.io}/${REPO:-joaquinbejar/clmm-liquidity-provider}/cli:${VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Docker/cli.Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-clmm_user}:${POSTGRES_PASSWORD:-clmm_password}@postgres:5432/${POSTGRES_DB:-clmm_lp}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      BIRDEYE_API_KEY: ${BIRDEYE_API_KEY:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    networks:
+      - clmm-network
+    depends_on:
+      - postgres
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: none
+    command: ["db", "init"]
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  clmm-network:
+    driver: overlay
+    attachable: true
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
