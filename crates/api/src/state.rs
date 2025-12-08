@@ -1,7 +1,7 @@
 //! Application state shared across handlers.
 
 use clmm_lp_execution::prelude::{
-    CircuitBreaker, LifecycleTracker, PositionMonitor, TransactionManager,
+    CircuitBreaker, LifecycleTracker, PositionMonitor, StrategyExecutor, TransactionManager,
 };
 use clmm_lp_protocols::prelude::{RpcConfig, RpcProvider};
 use std::collections::HashMap;
@@ -29,6 +29,10 @@ pub struct AppState {
     pub alert_updates: broadcast::Sender<AlertUpdate>,
     /// API configuration.
     pub config: ApiConfig,
+    /// Strategy executors by ID.
+    pub executors: Arc<RwLock<HashMap<String, Arc<RwLock<StrategyExecutor>>>>>,
+    /// Whether in dry-run mode.
+    pub dry_run: bool,
 }
 
 impl AppState {
@@ -59,7 +63,14 @@ impl AppState {
             position_updates: position_tx,
             alert_updates: alert_tx,
             config: api_config,
+            executors: Arc::new(RwLock::new(HashMap::new())),
+            dry_run: true, // Default to dry-run for safety
         }
+    }
+
+    /// Sets dry-run mode.
+    pub fn set_dry_run(&mut self, dry_run: bool) {
+        self.dry_run = dry_run;
     }
 
     /// Broadcasts a position update.

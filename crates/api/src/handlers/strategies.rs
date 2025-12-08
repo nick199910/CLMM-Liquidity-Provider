@@ -5,12 +5,15 @@ use crate::models::{
     CreateStrategyRequest, ListStrategiesResponse, MessageResponse, StrategyParameters,
     StrategyPerformanceResponse, StrategyResponse, StrategyType,
 };
-use crate::state::{AppState, StrategyState};
+use crate::state::{AlertUpdate, AppState, StrategyState};
 use axum::{
     Json,
     extract::{Path, State},
 };
+use clmm_lp_execution::prelude::{DecisionConfig, ExecutorConfig, StrategyExecutor};
 use rust_decimal::Decimal;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::info;
 
 /// List all strategies.
@@ -289,25 +292,127 @@ pub async fn start_strategy(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> ApiResult<Json<MessageResponse>> {
-    let mut strategies = state.strategies.write().await;
-    let strategy = strategies
-        .get_mut(&id)
-        .ok_or_else(|| ApiError::not_found("Strategy not found"))?;
+    // Get strategy configuration
+    let strategy_config = {
+        let mut strategies = state.strategies.write().await;
+        let strategy = strategies
+            .get_mut(&id)
+            .ok_or_else(|| ApiError::not_found("Strategy not found"))?;
 
-    if strategy.running {
-        return Err(ApiError::Conflict(
-            "Strategy is already running".to_string(),
-        ));
+        if strategy.running {
+            return Err(ApiError::Conflict(
+                "Strategy is already running".to_string(),
+            ));
+        }
+
+        strategy.running = true;
+        strategy.updated_at = chrono::Utc::now();
+        strategy.config.clone()
+    };
+
+    // Parse configuration
+    let dry_run = strategy_config
+        .get("dry_run")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let auto_execute = strategy_config
+        .get("auto_execute")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let eval_interval_secs = strategy_config
+        .get("parameters")
+        .and_then(|p| p.get("eval_interval_secs"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(300);
+
+    // Create executor configuration
+    let executor_config = ExecutorConfig {
+        eval_interval_secs,
+        auto_execute,
+        require_confirmation: !auto_execute,
+        max_slippage_pct: Decimal::new(5, 3), // 0.5%
+        dry_run,
+    };
+
+    // Create strategy executor
+    let mut executor = StrategyExecutor::new(
+        state.provider.clone(),
+        state.monitor.clone(),
+        state.tx_manager.clone(),
+        executor_config,
+    );
+
+    // Configure decision engine if parameters provided
+    if let Some(params) = strategy_config.get("parameters") {
+        let mut decision_config = DecisionConfig::default();
+
+        if let Some(threshold) = params.get("rebalance_threshold_pct")
+            && let Some(val) = threshold.as_f64()
+        {
+            decision_config.il_rebalance_threshold =
+                Decimal::from_f64_retain(val / 100.0).unwrap_or(Decimal::new(5, 2));
+        }
+
+        if let Some(max_il) = params.get("max_il_pct")
+            && let Some(val) = max_il.as_f64()
+        {
+            decision_config.il_close_threshold =
+                Decimal::from_f64_retain(val / 100.0).unwrap_or(Decimal::new(15, 2));
+        }
+
+        if let Some(min_hours) = params.get("min_rebalance_interval_hours")
+            && let Some(val) = min_hours.as_u64()
+        {
+            decision_config.min_rebalance_interval_hours = val;
+        }
+
+        executor.set_decision_config(decision_config);
     }
 
-    strategy.running = true;
-    strategy.updated_at = chrono::Utc::now();
+    let executor = Arc::new(RwLock::new(executor));
 
-    info!(id = %id, "Strategy started");
+    // Store executor
+    {
+        let mut executors = state.executors.write().await;
+        executors.insert(id.clone(), executor.clone());
+    }
 
-    // TODO: Actually start the strategy executor
+    // Start executor in background task
+    let executor_clone = executor.clone();
+    let id_clone = id.clone();
+    let alert_sender = state.alert_updates.clone();
 
-    Ok(Json(MessageResponse::new("Strategy started")))
+    tokio::spawn(async move {
+        info!(strategy_id = %id_clone, "Strategy executor task started");
+
+        let executor_guard = executor_clone.read().await;
+        executor_guard.start().await;
+
+        // Notify when stopped
+        let _ = alert_sender.send(AlertUpdate {
+            level: "info".to_string(),
+            message: format!("Strategy {} stopped", id_clone),
+            timestamp: chrono::Utc::now(),
+            position_address: None,
+        });
+    });
+
+    // Broadcast alert
+    state.broadcast_alert(AlertUpdate {
+        level: "info".to_string(),
+        message: format!("Strategy {} started", id),
+        timestamp: chrono::Utc::now(),
+        position_address: None,
+    });
+
+    info!(id = %id, dry_run = dry_run, auto_execute = auto_execute, "Strategy started");
+
+    Ok(Json(MessageResponse::new(format!(
+        "Strategy started (dry_run={}, auto_execute={})",
+        dry_run, auto_execute
+    ))))
 }
 
 /// Stop a strategy.
@@ -327,21 +432,46 @@ pub async fn stop_strategy(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> ApiResult<Json<MessageResponse>> {
-    let mut strategies = state.strategies.write().await;
-    let strategy = strategies
-        .get_mut(&id)
-        .ok_or_else(|| ApiError::not_found("Strategy not found"))?;
+    // Update strategy state
+    {
+        let mut strategies = state.strategies.write().await;
+        let strategy = strategies
+            .get_mut(&id)
+            .ok_or_else(|| ApiError::not_found("Strategy not found"))?;
 
-    if !strategy.running {
-        return Err(ApiError::Conflict("Strategy is not running".to_string()));
+        if !strategy.running {
+            return Err(ApiError::Conflict("Strategy is not running".to_string()));
+        }
+
+        strategy.running = false;
+        strategy.updated_at = chrono::Utc::now();
     }
 
-    strategy.running = false;
-    strategy.updated_at = chrono::Utc::now();
+    // Stop the executor
+    {
+        let executors = state.executors.read().await;
+        if let Some(executor) = executors.get(&id) {
+            let executor_guard = executor.read().await;
+            executor_guard.stop();
+            info!(id = %id, "Strategy executor stopped");
+        }
+    }
+
+    // Remove executor from map
+    {
+        let mut executors = state.executors.write().await;
+        executors.remove(&id);
+    }
+
+    // Broadcast alert
+    state.broadcast_alert(AlertUpdate {
+        level: "info".to_string(),
+        message: format!("Strategy {} stopped", id),
+        timestamp: chrono::Utc::now(),
+        position_address: None,
+    });
 
     info!(id = %id, "Strategy stopped");
-
-    // TODO: Actually stop the strategy executor
 
     Ok(Json(MessageResponse::new("Strategy stopped")))
 }

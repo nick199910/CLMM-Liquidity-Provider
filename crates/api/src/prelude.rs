@@ -32,3 +32,6 @@ pub use crate::middleware::RateLimiter;
 
 // Routes
 pub use crate::routes::{create_router, create_versioned_router};
+
+// Services
+pub use crate::services::{PositionService, StrategyService};

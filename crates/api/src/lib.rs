@@ -22,6 +22,8 @@ pub mod models;
 pub mod routes;
 /// Server configuration and startup.
 pub mod server;
+/// Service layer for API operations.
+pub mod services;
 /// Application state.
 pub mod state;
 /// WebSocket handlers.
@@ -29,4 +31,5 @@ pub mod websocket;
 
 pub use error::ApiError;
 pub use server::{ApiServer, ServerConfig};
+pub use services::{PositionService, StrategyService};
 pub use state::AppState;

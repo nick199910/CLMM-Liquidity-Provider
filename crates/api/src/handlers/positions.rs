@@ -5,14 +5,16 @@ use crate::models::{
     ListPositionsResponse, MessageResponse, OpenPositionRequest, PnLResponse, PositionResponse,
     PositionStatus, RebalanceRequest,
 };
-use crate::state::AppState;
+use crate::state::{AlertUpdate, AppState, PositionUpdate};
 use axum::{
     Json,
     extract::{Path, State},
 };
+use clmm_lp_execution::prelude::{RebalanceData, RebalanceReason};
+use clmm_lp_protocols::prelude::WhirlpoolReader;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{info, warn};
 
 /// List all positions.
 #[utoipa::path(
@@ -132,21 +134,52 @@ pub async fn get_position(
     )
 )]
 pub async fn open_position(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(request): Json<OpenPositionRequest>,
 ) -> ApiResult<Json<MessageResponse>> {
     info!(
         pool = %request.pool_address,
         tick_lower = request.tick_lower,
         tick_upper = request.tick_upper,
+        dry_run = state.dry_run,
         "Opening position"
     );
 
-    // TODO: Implement actual position opening
-    // This would use the WhirlpoolExecutor to open a position
+    // Validate tick range
+    if request.tick_lower >= request.tick_upper {
+        return Err(ApiError::Validation(
+            "tick_lower must be less than tick_upper".to_string(),
+        ));
+    }
 
+    // Validate pool exists
+    let pool_reader = WhirlpoolReader::new(state.provider.clone());
+    let pool_state = pool_reader
+        .get_pool_state(&request.pool_address)
+        .await
+        .map_err(|e| ApiError::not_found(format!("Pool not found: {}", e)))?;
+
+    // Validate tick spacing
+    let tick_spacing = pool_state.tick_spacing as i32;
+    if request.tick_lower % tick_spacing != 0 || request.tick_upper % tick_spacing != 0 {
+        return Err(ApiError::Validation(format!(
+            "Tick bounds must be multiples of tick spacing ({})",
+            tick_spacing
+        )));
+    }
+
+    if state.dry_run {
+        info!("Dry-run mode: would open position");
+        return Ok(Json(MessageResponse::new(format!(
+            "[DRY-RUN] Would open position in pool {} with range [{}, {}]",
+            request.pool_address, request.tick_lower, request.tick_upper
+        ))));
+    }
+
+    // Actual execution requires wallet configuration
+    warn!("Position opening requires wallet configuration");
     Ok(Json(MessageResponse::new(
-        "Position opening not yet implemented",
+        "Position opening requires wallet configuration. Set up wallet first.",
     )))
 }
 
@@ -164,18 +197,45 @@ pub async fn open_position(
     )
 )]
 pub async fn close_position(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(address): Path<String>,
 ) -> ApiResult<Json<MessageResponse>> {
-    let _pubkey = Pubkey::from_str(&address)
+    let pubkey = Pubkey::from_str(&address)
         .map_err(|_| ApiError::bad_request("Invalid position address"))?;
 
-    info!(position = %address, "Closing position");
+    info!(position = %address, dry_run = state.dry_run, "Closing position");
 
-    // TODO: Implement actual position closing
+    // Verify position exists
+    let positions = state.monitor.get_positions().await;
+    let position = positions
+        .iter()
+        .find(|p| p.address == pubkey)
+        .ok_or_else(|| ApiError::not_found("Position not found"))?;
 
+    if state.dry_run {
+        info!("Dry-run mode: would close position");
+
+        // Broadcast simulated update
+        state.broadcast_position_update(PositionUpdate {
+            update_type: "close_simulated".to_string(),
+            position_address: address.clone(),
+            timestamp: chrono::Utc::now(),
+            data: serde_json::json!({
+                "liquidity": position.on_chain.liquidity.to_string(),
+                "dry_run": true
+            }),
+        });
+
+        return Ok(Json(MessageResponse::new(format!(
+            "[DRY-RUN] Would close position {} with liquidity {}",
+            address, position.on_chain.liquidity
+        ))));
+    }
+
+    // Actual execution requires wallet configuration
+    warn!("Position closing requires wallet configuration");
     Ok(Json(MessageResponse::new(
-        "Position closing not yet implemented",
+        "Position closing requires wallet configuration. Set up wallet first.",
     )))
 }
 
@@ -193,18 +253,46 @@ pub async fn close_position(
     )
 )]
 pub async fn collect_fees(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(address): Path<String>,
 ) -> ApiResult<Json<MessageResponse>> {
-    let _pubkey = Pubkey::from_str(&address)
+    let pubkey = Pubkey::from_str(&address)
         .map_err(|_| ApiError::bad_request("Invalid position address"))?;
 
-    info!(position = %address, "Collecting fees");
+    info!(position = %address, dry_run = state.dry_run, "Collecting fees");
 
-    // TODO: Implement actual fee collection
+    // Verify position exists
+    let positions = state.monitor.get_positions().await;
+    let position = positions
+        .iter()
+        .find(|p| p.address == pubkey)
+        .ok_or_else(|| ApiError::not_found("Position not found"))?;
 
+    if state.dry_run {
+        info!("Dry-run mode: would collect fees");
+
+        // Broadcast simulated update
+        state.broadcast_position_update(PositionUpdate {
+            update_type: "fees_collected_simulated".to_string(),
+            position_address: address.clone(),
+            timestamp: chrono::Utc::now(),
+            data: serde_json::json!({
+                "fees_a": position.pnl.fees_earned_a,
+                "fees_b": position.pnl.fees_earned_b,
+                "dry_run": true
+            }),
+        });
+
+        return Ok(Json(MessageResponse::new(format!(
+            "[DRY-RUN] Would collect fees from position {}: {} token A, {} token B",
+            address, position.pnl.fees_earned_a, position.pnl.fees_earned_b
+        ))));
+    }
+
+    // Actual execution requires wallet configuration
+    warn!("Fee collection requires wallet configuration");
     Ok(Json(MessageResponse::new(
-        "Fee collection not yet implemented",
+        "Fee collection requires wallet configuration. Set up wallet first.",
     )))
 }
 
@@ -223,24 +311,119 @@ pub async fn collect_fees(
     )
 )]
 pub async fn rebalance_position(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(address): Path<String>,
     Json(request): Json<RebalanceRequest>,
 ) -> ApiResult<Json<MessageResponse>> {
-    let _pubkey = Pubkey::from_str(&address)
+    let pubkey = Pubkey::from_str(&address)
         .map_err(|_| ApiError::bad_request("Invalid position address"))?;
 
     info!(
         position = %address,
         new_tick_lower = request.new_tick_lower,
         new_tick_upper = request.new_tick_upper,
+        dry_run = state.dry_run,
         "Rebalancing position"
     );
 
-    // TODO: Implement actual rebalancing
+    // Validate tick range
+    if request.new_tick_lower >= request.new_tick_upper {
+        return Err(ApiError::Validation(
+            "new_tick_lower must be less than new_tick_upper".to_string(),
+        ));
+    }
 
+    // Verify position exists
+    let positions = state.monitor.get_positions().await;
+    let position = positions
+        .iter()
+        .find(|p| p.address == pubkey)
+        .ok_or_else(|| ApiError::not_found("Position not found"))?;
+
+    // Fetch pool state for validation
+    let pool_reader = WhirlpoolReader::new(state.provider.clone());
+    let pool_state = pool_reader
+        .get_pool_state(&position.pool.to_string())
+        .await
+        .map_err(|e| ApiError::Internal(format!("Failed to fetch pool state: {}", e)))?;
+
+    // Validate tick spacing
+    let tick_spacing = pool_state.tick_spacing as i32;
+    if request.new_tick_lower % tick_spacing != 0 || request.new_tick_upper % tick_spacing != 0 {
+        return Err(ApiError::Validation(format!(
+            "Tick bounds must be multiples of tick spacing ({})",
+            tick_spacing
+        )));
+    }
+
+    if state.dry_run {
+        info!("Dry-run mode: would rebalance position");
+
+        // Broadcast simulated update
+        state.broadcast_position_update(PositionUpdate {
+            update_type: "rebalance_simulated".to_string(),
+            position_address: address.clone(),
+            timestamp: chrono::Utc::now(),
+            data: serde_json::json!({
+                "old_range": [position.on_chain.tick_lower, position.on_chain.tick_upper],
+                "new_range": [request.new_tick_lower, request.new_tick_upper],
+                "dry_run": true
+            }),
+        });
+
+        return Ok(Json(MessageResponse::new(format!(
+            "[DRY-RUN] Would rebalance position {} from [{}, {}] to [{}, {}]",
+            address,
+            position.on_chain.tick_lower,
+            position.on_chain.tick_upper,
+            request.new_tick_lower,
+            request.new_tick_upper
+        ))));
+    }
+
+    // Record rebalance intent in lifecycle tracker
+    state
+        .lifecycle
+        .record_rebalance(
+            pubkey,
+            position.pool,
+            RebalanceData {
+                old_tick_lower: position.on_chain.tick_lower,
+                old_tick_upper: position.on_chain.tick_upper,
+                new_tick_lower: request.new_tick_lower,
+                new_tick_upper: request.new_tick_upper,
+                old_liquidity: position.on_chain.liquidity,
+                new_liquidity: position.on_chain.liquidity,
+                tx_cost_lamports: 0,
+                il_at_rebalance: position.pnl.il_pct,
+                reason: RebalanceReason::Manual,
+            },
+        )
+        .await;
+
+    // Broadcast update
+    state.broadcast_position_update(PositionUpdate {
+        update_type: "rebalance_initiated".to_string(),
+        position_address: address.clone(),
+        timestamp: chrono::Utc::now(),
+        data: serde_json::json!({
+            "old_range": [position.on_chain.tick_lower, position.on_chain.tick_upper],
+            "new_range": [request.new_tick_lower, request.new_tick_upper]
+        }),
+    });
+
+    // Broadcast alert
+    state.broadcast_alert(AlertUpdate {
+        level: "info".to_string(),
+        message: format!("Rebalance initiated for position {}", address),
+        timestamp: chrono::Utc::now(),
+        position_address: Some(address.clone()),
+    });
+
+    // Actual execution requires wallet configuration
+    warn!("Rebalance recorded - actual execution requires wallet configuration");
     Ok(Json(MessageResponse::new(
-        "Rebalancing not yet implemented",
+        "Rebalance recorded. Actual execution requires wallet configuration.",
     )))
 }
 
