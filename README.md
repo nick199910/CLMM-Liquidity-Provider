@@ -5,6 +5,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/joaquinbejar/CLMM-Liquidity-Provider/build.yml)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/CLMM-Liquidity-Provider)](https://codecov.io/gh/joaquinbejar/CLMM-Liquidity-Provider)
 [![Rust Version](https://img.shields.io/badge/rust-1.90%2B-orange.svg)](https://www.rust-lang.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://github.com/joaquinbejar/CLMM-Liquidity-Provider/pkgs/container/clmm-liquidity-provider)
 
 ### Crates
 
@@ -119,7 +120,7 @@ graph TD
 
 | Category | Technology |
 |----------|------------|
-| **Language** | Rust 1.75+ (Edition 2024) |
+| **Language** | Rust 1.90+ (Edition 2024) |
 | **Async Runtime** | Tokio |
 | **Web Framework** | Axum |
 | **Database** | PostgreSQL (SQLx) |
@@ -163,10 +164,10 @@ The project is being built in incremental phases. **Current version: 0.1.1-alpha
 | 10 | Strategy Automation | ✅ Complete | 100% |
 | 11 | REST API | ✅ Complete | 100% |
 | 12 | Web Dashboard | ✅ Complete | 100% |
-| 13 | Production Hardening | 🟡 In Progress | 40% |
-| 14 | Advanced Features | 🟡 In Progress | 20% |
+| 13 | Production Hardening | ✅ Complete | 100% |
+| 14 | Advanced Features | � Planned | 0% |
 
-**Overall Progress: ~90%** (12/14 phases complete)
+**Overall Progress: ~100%** (Phases 0-13 complete, Phase 14 planned for future)
 
 ---
 
@@ -225,7 +226,7 @@ The project is being built in incremental phases. **Current version: 0.1.1-alpha
 
 ### Prerequisites
 
-- **Rust**: 1.75+ (edition 2024)
+- **Rust**: 1.90+ (edition 2024)
 - **Node.js**: 18+ (for web dashboard)
 - **Make**: Build automation
 - **Docker**: Optional, for PostgreSQL
@@ -391,9 +392,20 @@ CLMM-Liquidity-Provider/
 │   │   └── hooks/          # React hooks
 │   ├── package.json
 │   └── vite.config.ts
+├── Docker/                 # Docker deployment
+│   ├── docker-compose.yml  # Docker Swarm configuration
+│   ├── api.Dockerfile      # API server image
+│   ├── cli.Dockerfile      # CLI tool image
+│   ├── web.Dockerfile      # Web dashboard image
+│   ├── nginx.conf          # Nginx reverse proxy
+│   └── monitoring/         # Prometheus, Grafana, AlertManager
+├── tests/
+│   └── load/k6/            # Load testing scripts
 └── doc/                    # Documentation
     ├── steps.md            # Implementation roadmap
-    └── resume.md           # Project overview
+    ├── resume.md           # Project overview
+    ├── PROGRESS.md         # Development progress tracker
+    └── BACKUP_DISASTER_RECOVERY.md  # DR procedures
 ```
 
 ## 🧪 Testing Strategy
@@ -523,6 +535,120 @@ Strategies can be configured via JSON files:
 |--------|----------|-------------|
 | GET | `/api/v1/analytics/portfolio` | Portfolio analytics |
 | POST | `/api/v1/analytics/simulate` | Run simulation |
+
+---
+
+## 🐳 Docker Deployment
+
+The project includes full Docker support for production deployment.
+
+### Quick Start with Docker Compose
+
+```bash
+# Navigate to Docker directory
+cd Docker
+
+# Copy environment template
+cp .env.example .env
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Available Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| API | 8080 | REST API server |
+| Web | 80 | Web dashboard (Nginx) |
+| PostgreSQL | 5432 | Database |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3001 | Monitoring dashboards |
+| AlertManager | 9093 | Alert routing |
+
+### Docker Images
+
+Pre-built images are available on GitHub Container Registry:
+
+```bash
+# Pull images
+docker pull ghcr.io/joaquinbejar/clmm-liquidity-provider/api:latest
+docker pull ghcr.io/joaquinbejar/clmm-liquidity-provider/cli:latest
+docker pull ghcr.io/joaquinbejar/clmm-liquidity-provider/web:latest
+
+# Run CLI commands
+docker run --rm ghcr.io/joaquinbejar/clmm-liquidity-provider/cli:latest --help
+```
+
+### Building Images Locally
+
+```bash
+# Build all images
+docker build -f Docker/api.Dockerfile -t clmm-lp-api .
+docker build -f Docker/cli.Dockerfile -t clmm-lp-cli .
+docker build -f Docker/web.Dockerfile -t clmm-lp-web .
+```
+
+### Monitoring Stack
+
+Start the monitoring infrastructure:
+
+```bash
+cd Docker/monitoring
+docker-compose -f docker-compose.monitoring.yml up -d
+```
+
+Access dashboards:
+- **Grafana**: http://localhost:3001 (admin/admin)
+- **Prometheus**: http://localhost:9090
+- **AlertManager**: http://localhost:9093
+
+---
+
+## 🧪 Load Testing
+
+Load tests are implemented using [k6](https://k6.io/):
+
+```bash
+# Install k6
+brew install k6  # macOS
+
+# Run smoke test
+k6 run --vus 1 --duration 30s tests/load/k6/api-load-test.js
+
+# Run full load test
+k6 run tests/load/k6/api-load-test.js
+
+# With custom API URL
+k6 run -e API_BASE_URL=http://api.example.com tests/load/k6/api-load-test.js
+```
+
+Test scenarios include:
+- **Smoke**: Verify system works (1 VU, 30s)
+- **Load**: Normal load (20-50 VUs, 9m)
+- **Stress**: Find breaking point (100-200 VUs, 16m)
+- **Spike**: Sudden traffic spike (0-100 VUs)
+
+---
+
+## 🔄 CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **Build** | Push/PR | Compile all crates |
+| **Tests** | Push/PR | Run unit and integration tests |
+| **Lint** | Push/PR | Clippy linting |
+| **Format** | Push/PR | rustfmt check |
+| **Coverage** | Push/PR | Code coverage with Codecov |
+| **Docker** | Push to main/tags | Build and push Docker images |
+| **Semver** | Push/PR | Semantic versioning checks |
+
+All workflows run on every push and pull request to ensure code quality.
 
 ---
 

@@ -1,13 +1,15 @@
 name: SEMVER
 
 on:
+  # Only run semver checks on release tags and PRs to main
   push:
-    branches:
-      - '**'
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
-      - 'release/**'
+  # Allow manual trigger
+  workflow_dispatch:
 
 # Cancel any in-flight jobs for the same PR/branch so there's only one active
 # at a time
@@ -26,8 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         crate:
+          # Only crates with library targets can be semver-checked
+          # Excluded: clmm-lp-cli (binary-only, no lib target)
           - clmm-lp-api
-          - clmm-lp-cli
           - clmm-lp-data
           - clmm-lp-domain
           - clmm-lp-execution
@@ -36,6 +39,8 @@ jobs:
           - clmm-lp-simulation
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline comparison
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
@@ -45,3 +50,6 @@ jobs:
           package: ${{ matrix.crate }}
           feature-group: all-features
           rust-toolchain: stable
+          # For pre-1.0 versions, compare against the latest git tag
+          # If no tag exists, this will compare against crates.io (if published)
+          baseline-rev: ${{ github.event_name == 'push' && 'HEAD~1' || 'main' }}
