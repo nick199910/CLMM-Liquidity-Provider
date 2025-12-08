@@ -1,0 +1,17 @@
+# =============================================================================
+# Grafana Dashboard Provisioning Configuration
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'CLMM LP Dashboards'
+    orgId: 1
+    folder: 'CLMM Liquidity Provider'
+    folderUid: 'clmm-lp'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

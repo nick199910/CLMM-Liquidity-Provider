@@ -1,0 +1,179 @@
+# =============================================================================
+# Prometheus Alerting Rules for CLMM Liquidity Provider
+# =============================================================================
+
+groups:
+  # -------------------------------------------------------------------------
+  # API Server Alerts
+  # -------------------------------------------------------------------------
+  - name: api_alerts
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="clmm-lp-api",status=~"5.."}[5m])) 
+          / sum(rate(http_requests_total{job="clmm-lp-api"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is above 5% for the last 5 minutes (current: {{ $value | humanizePercentage }})"
+
+      - alert: APIHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="clmm-lp-api"}[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is above 500ms (current: {{ $value | humanizeDuration }})"
+
+      - alert: APIDown
+        expr: up{job="clmm-lp-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API server is down"
+          description: "CLMM LP API server has been down for more than 1 minute"
+
+  # -------------------------------------------------------------------------
+  # Database Alerts
+  # -------------------------------------------------------------------------
+  - name: database_alerts
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute"
+
+      - alert: PostgresHighConnections
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connection pool nearly exhausted"
+          description: "PostgreSQL is using {{ $value | humanizePercentage }} of available connections"
+
+      - alert: PostgresSlowQueries
+        expr: |
+          rate(pg_stat_activity_max_tx_duration{state="active"}[5m]) > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow PostgreSQL queries detected"
+          description: "Long-running queries detected in PostgreSQL"
+
+  # -------------------------------------------------------------------------
+  # Position & Trading Alerts
+  # -------------------------------------------------------------------------
+  - name: trading_alerts
+    rules:
+      - alert: HighImpermanentLoss
+        expr: |
+          clmm_position_impermanent_loss_percent > 10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High impermanent loss on position"
+          description: "Position {{ $labels.position_address }} has IL of {{ $value }}%"
+
+      - alert: PositionOutOfRange
+        expr: |
+          clmm_position_in_range == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Position out of range"
+          description: "Position {{ $labels.position_address }} has been out of range for 30+ minutes"
+
+      - alert: TransactionFailureRate
+        expr: |
+          sum(rate(clmm_transactions_total{status="failed"}[15m])) 
+          / sum(rate(clmm_transactions_total[15m])) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High transaction failure rate"
+          description: "Transaction failure rate is above 10% (current: {{ $value | humanizePercentage }})"
+
+      - alert: HighPriorityFees
+        expr: |
+          clmm_priority_fee_lamports > 100000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High priority fees detected"
+          description: "Priority fees are unusually high: {{ $value }} lamports"
+
+  # -------------------------------------------------------------------------
+  # System Resource Alerts
+  # -------------------------------------------------------------------------
+  - name: system_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% on {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is above 85% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+
+  # -------------------------------------------------------------------------
+  # Network & Connectivity Alerts
+  # -------------------------------------------------------------------------
+  - name: network_alerts
+    rules:
+      - alert: RPCEndpointDown
+        expr: |
+          clmm_rpc_health == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Solana RPC endpoint is down"
+          description: "RPC endpoint {{ $labels.endpoint }} is not responding"
+
+      - alert: RPCHighLatency
+        expr: |
+          clmm_rpc_latency_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High RPC latency"
+          description: "RPC latency to {{ $labels.endpoint }} is {{ $value }}s"

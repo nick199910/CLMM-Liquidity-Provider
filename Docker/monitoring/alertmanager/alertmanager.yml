@@ -1,0 +1,121 @@
+# =============================================================================
+# Alertmanager Configuration for CLMM Liquidity Provider
+# =============================================================================
+
+global:
+  # Global SMTP settings (configure for email alerts)
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_auth_username: 'alertmanager@example.com'
+  # smtp_auth_password: 'password'
+
+  # Slack settings (configure for Slack alerts)
+  # slack_api_url: 'https://hooks.slack.com/services/xxx/yyy/zzz'
+
+  resolve_timeout: 5m
+
+# Route tree for alert routing
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'severity']
+  
+  # Wait before sending first notification for a group
+  group_wait: 30s
+  
+  # Wait before sending subsequent notifications for a group
+  group_interval: 5m
+  
+  # Wait before resending a notification
+  repeat_interval: 4h
+
+  # Child routes for specific alert routing
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts - less urgent
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Trading-specific alerts
+    - match_re:
+        alertname: ^(HighImpermanentLoss|PositionOutOfRange|TransactionFailureRate)$
+      receiver: 'trading-receiver'
+      group_wait: 30s
+      repeat_interval: 2h
+
+# Inhibition rules to suppress certain alerts
+inhibit_rules:
+  # If API is down, suppress high latency alerts
+  - source_match:
+      alertname: 'APIDown'
+    target_match:
+      alertname: 'APIHighLatency'
+    equal: ['job']
+
+  # If PostgreSQL is down, suppress connection alerts
+  - source_match:
+      alertname: 'PostgresDown'
+    target_match:
+      alertname: 'PostgresHighConnections'
+
+# Receivers define notification channels
+receivers:
+  # Default receiver - logs only
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/webhooks/alerts'
+        send_resolved: true
+
+  # Critical alerts receiver
+  - name: 'critical-receiver'
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/webhooks/alerts'
+        send_resolved: true
+    # Uncomment and configure for Slack
+    # slack_configs:
+    #   - channel: '#clmm-alerts-critical'
+    #     title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    #     send_resolved: true
+    # Uncomment and configure for PagerDuty
+    # pagerduty_configs:
+    #   - service_key: '<your-pagerduty-service-key>'
+    #     severity: critical
+
+  # Warning alerts receiver
+  - name: 'warning-receiver'
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/webhooks/alerts'
+        send_resolved: true
+    # Uncomment and configure for Slack
+    # slack_configs:
+    #   - channel: '#clmm-alerts'
+    #     title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    #     send_resolved: true
+
+  # Trading-specific alerts receiver
+  - name: 'trading-receiver'
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/webhooks/alerts'
+        send_resolved: true
+    # Uncomment and configure for Telegram
+    # telegram_configs:
+    #   - bot_token: '<your-telegram-bot-token>'
+    #     chat_id: <your-chat-id>
+    #     message: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
