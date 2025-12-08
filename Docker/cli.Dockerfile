@@ -22,8 +22,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy workspace files
-COPY Cargo.toml Cargo.lock ./
-COPY crates ./crates
+COPY . .
 
 # Build release binary
 RUN cargo build --release --bin clmm-lp-cli
